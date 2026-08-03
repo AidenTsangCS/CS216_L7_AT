@@ -55,8 +55,10 @@ const char DIVIDER_CHAR = '=';
 
 const unsigned int RANDOM_SEED = 216;
 const int COIN_FLIP = 2;
+const int LETTER_CASE_OFFSET = 'a' - 'A';
 
 enum MenuOption { PLAY = 1, QUIT };
+enum RematchOption { REMATCH_YES = 1, REMATCH_NO };
 enum CreatureType { DEMON, BALROG, ELF, CYBERELF };
 
 class Creature {
@@ -150,6 +152,7 @@ class Army {
     Army &operator=(const Army &rhs);
 
     bool createArmy(const string &newName, int newSize, const string *pNames, int startIndex);
+    void resetCreatures();
 
     string getName() const;
     int getSize() const;
@@ -164,6 +167,7 @@ class Game {
     Army army2;
 
     void runBattle(const string *pNames, int nameCount);
+    void fightRound(int armySize);
     void runDuel(int position);
     void performStrike(Creature *pAttacker, const string &attackerArmy, Creature *pDefender, const string &defenderArmy) const;
     void printDuelHeader() const;
@@ -179,6 +183,7 @@ void clearCin(const string &errorMessage);
 int readInt(const string &prompt, int minVal, int maxVal);
 string readArmyName(const string &prompt);
 int countAlphabetic(const string &text);
+string capitalizeFirst(const string &text);
 int randomStat();
 CreatureType randomType();
 Creature *createCreature(CreatureType type, const string &creatureName, int newStrength, int newHealth);
@@ -280,7 +285,7 @@ string Creature::getTypeName() const {
 }
 
 string Creature::getName() const {
-    return name + " the " + getTypeName();
+    return name + " the " + capitalizeFirst(getTypeName());
 }
 
 int Creature::getDamage() const {
@@ -517,6 +522,14 @@ bool Army::createArmy(const string &newName, int newSize, const string *pNames, 
     return isSuccess;
 }
 
+void Army::resetCreatures() {
+    if (ppCreatures != nullptr) {
+        for (int i = 0; i < size; ++i) {
+            ppCreatures[i]->reset();
+        }
+    }
+}
+
 string Army::getName() const {
     return name;
 }
@@ -592,7 +605,7 @@ void Game::runBattle(const string *pNames, int nameCount) {
     else {
         string name1 = readArmyName("\nEnter the name of army #1 (3+ letters): ");
         string name2 = readArmyName("Enter the name of army #2 (3+ letters): ");
-        int armySize = readInt("Enter the number of creatures per army between 1-12: ", MIN_ARMY_SIZE, maxSize);
+        int armySize = readInt("Enter the number of creatures per army: ", MIN_ARMY_SIZE, maxSize);
         bool isReady = army1.createArmy(name1, armySize, pNames, 0);
 
         if (isReady) {
@@ -603,23 +616,38 @@ void Game::runBattle(const string *pNames, int nameCount) {
             cout << "\nThe armies could not be built; returning to the menu" << endl;
         }
         else {
-            printDivider();
-            cout << "NEW BATTLE" << endl;
-            printDivider();
+            bool wantsRematch = true;
 
-            army1.print("before the Battle");
-            army2.print("before the Battle");
-            printDuelHeader();
+            while (wantsRematch) {
+                fightRound(armySize);
+                wantsRematch = (readInt("\nFight a rematch with the same creatures? 1. Yes  2. No\nEnter your choice: ", REMATCH_YES, REMATCH_NO) == REMATCH_YES);
 
-            for (int position = 0; position < armySize; ++position) {
-                runDuel(position);
+                if (wantsRematch) {
+                    army1.resetCreatures();
+                    army2.resetCreatures();
+                    cout << "\nBoth armies have recovered; every creature's strength and health were re-rolled" << endl;
+                }
             }
-
-            army1.print("after the Battle");
-            army2.print("after the Battle");
-            announceWinner();
         }
     }
+}
+
+void Game::fightRound(int armySize) {
+    printDivider();
+    cout << "NEW BATTLE" << endl;
+    printDivider();
+
+    army1.print("before the Battle");
+    army2.print("before the Battle");
+    printDuelHeader();
+
+    for (int position = 0; position < armySize; ++position) {
+        runDuel(position);
+    }
+
+    army1.print("after the Battle");
+    army2.print("after the Battle");
+    announceWinner();
 }
 
 void Game::printDuelHeader() const {
@@ -771,6 +799,16 @@ int countAlphabetic(const string &text) {
     return count;
 }
 
+string capitalizeFirst(const string &text) {
+    string capitalized = text;
+
+    if (capitalized.length() > 0 && capitalized[0] >= 'a' && capitalized[0] <= 'z') {
+        capitalized[0] = static_cast<char>(capitalized[0] - LETTER_CASE_OFFSET);
+    }
+
+    return capitalized;
+}
+
 int randomStat() {
     return (rand() % (MAX_ARMY_STAT - MIN_ARMY_STAT + 1)) + MIN_ARMY_STAT;
 }
@@ -882,17 +920,333 @@ aidentsang@Aidens-MacBook-Pro CS216_L7_AT % "/Users/aidentsang/Pierce college La
 Battle Arena Menu:
 1. Play Game
 2. Quit
+Enter your choice: 1
+
+Enter the name of army #1 (3+ letters): A
+
+An army name needs at least 3 letters
+
+Enter the name of army #1 (3+ letters): ! 
+
+An army name needs at least 3 letters
+
+Enter the name of army #1 (3+ letters): Aid
+Enter the name of army #2 (3+ letters): Sha
+Enter the number of creatures per army: -1
+
+Please enter a number between 1 and 12
+Enter the number of creatures per army: !
+
+Invalid input; please enter a whole number
+Enter the number of creatures per army: 12
+==============================================================================
+NEW BATTLE
+==============================================================================
+
+Aid Stats before the Battle
+Creature        Type          Strength    Health
+Morgas          demon              101       146
+Thorfin         cyberelf           239       118
+Petra           elf                262        94
+Karan           balrog             104       239
+Seren           cyberelf            95       244
+Lunara          elf                249        68
+Lagnar          elf                 70        63
+Orrin           demon              134       160
+Quillon         elf                160       209
+Morwen          balrog             145       158
+Chester         demon              235       220
+Ragnar          elf                 61       236
+Total health of Aid: 1955
+
+Sha Stats before the Battle
+Creature        Type          Strength    Health
+Kaelith         demon              224       188
+Aldric          elf                217        64
+Grisha          demon              198        85
+Isolde          cyberelf            80        46
+Dorian          elf                194       186
+Hollis          cyberelf           204       118
+Faelan          balrog             259       246
+Cassia          balrog              53       221
+Bricta          cyberelf           147        90
+Varek           demon              111       197
+Nimue           balrog             236        84
+Osric           cyberelf           105       125
+Total health of Sha: 1650
+
+Attacker                Army           Damage   Defender                Army           Before    After
+
+-- Duel 1: Morgas the Demon of Aid vs Kaelith the Demon of Sha --
+Morgas the Demon        Aid                95   Kaelith the Demon       Sha               188       93
+Kaelith the Demon       Sha               117   Morgas the Demon        Aid               146       29
+Morgas the Demon        Aid                29   Kaelith the Demon       Sha                93       64
+Kaelith the Demon       Sha               159   Morgas the Demon        Aid                29        0
+>> Kaelith the Demon defeated Morgas the Demon
+
+-- Duel 2: Thorfin the Cyberelf of Aid vs Aldric the Elf of Sha --
+Thorfin the Cyberelf    Aid               166   Aldric the Elf          Sha                64        0
+>> Thorfin the Cyberelf defeated Aldric the Elf
+
+-- Duel 3: Petra the Elf of Aid vs Grisha the Demon of Sha --
+Petra the Elf           Aid                20   Grisha the Demon        Sha                85       65
+Grisha the Demon        Sha                 2   Petra the Elf           Aid                94       92
+Petra the Elf           Aid                71   Grisha the Demon        Sha                65        0
+>> Petra the Elf defeated Grisha the Demon
+
+-- Duel 4: Karan the Balrog of Aid vs Isolde the Cyberelf of Sha --
+Karan the Balrog        Aid                55   Isolde the Cyberelf     Sha                46        0
+>> Karan the Balrog defeated Isolde the Cyberelf
+
+-- Duel 5: Seren the Cyberelf of Aid vs Dorian the Elf of Sha --
+Dorian the Elf          Sha                76   Seren the Cyberelf      Aid               244      168
+Seren the Cyberelf      Aid                53   Dorian the Elf          Sha               186      133
+Dorian the Elf          Sha                64   Seren the Cyberelf      Aid               168      104
+Seren the Cyberelf      Aid                63   Dorian the Elf          Sha               133       70
+Dorian the Elf          Sha                40   Seren the Cyberelf      Aid               104       64
+Seren the Cyberelf      Aid                50   Dorian the Elf          Sha                70       20
+Dorian the Elf          Sha               184   Seren the Cyberelf      Aid                64        0
+>> Dorian the Elf defeated Seren the Cyberelf
+
+-- Duel 6: Lunara the Elf of Aid vs Hollis the Cyberelf of Sha --
+Hollis the Cyberelf     Sha                71   Lunara the Elf          Aid                68        0
+>> Hollis the Cyberelf defeated Lunara the Elf
+
+-- Duel 7: Lagnar the Elf of Aid vs Faelan the Balrog of Sha --
+Lagnar the Elf          Aid                41   Faelan the Balrog       Sha               246      205
+Faelan the Balrog       Sha               376   Lagnar the Elf          Aid                63        0
+>> Faelan the Balrog defeated Lagnar the Elf
+
+-- Duel 8: Orrin the Demon of Aid vs Cassia the Balrog of Sha --
+Cassia the Balrog       Sha                35   Orrin the Demon         Aid               160      125
+Orrin the Demon         Aid               166   Cassia the Balrog       Sha               221       55
+Cassia the Balrog       Sha                70   Orrin the Demon         Aid               125       55
+Orrin the Demon         Aid               105   Cassia the Balrog       Sha                55        0
+>> Orrin the Demon defeated Cassia the Balrog
+
+-- Duel 9: Quillon the Elf of Aid vs Bricta the Cyberelf of Sha --
+Bricta the Cyberelf     Sha               113   Quillon the Elf         Aid               209       96
+Quillon the Elf         Aid                76   Bricta the Cyberelf     Sha                90       14
+Bricta the Cyberelf     Sha                78   Quillon the Elf         Aid                96       18
+Quillon the Elf         Aid               224   Bricta the Cyberelf     Sha                14        0
+>> Quillon the Elf defeated Bricta the Cyberelf
+
+-- Duel 10: Morwen the Balrog of Aid vs Varek the Demon of Sha --
+Varek the Demon         Sha                83   Morwen the Balrog       Aid               158       75
+Morwen the Balrog       Aid               196   Varek the Demon         Sha               197        1
+Varek the Demon         Sha                 5   Morwen the Balrog       Aid                75       70
+Morwen the Balrog       Aid                95   Varek the Demon         Sha                 1        0
+>> Morwen the Balrog defeated Varek the Demon
+
+-- Duel 11: Chester the Demon of Aid vs Nimue the Balrog of Sha --
+Chester the Demon       Aid                12   Nimue the Balrog        Sha                84       72
+Nimue the Balrog        Sha               233   Chester the Demon       Aid               220        0
+>> Nimue the Balrog defeated Chester the Demon
+
+-- Duel 12: Ragnar the Elf of Aid vs Osric the Cyberelf of Sha --
+Ragnar the Elf          Aid                55   Osric the Cyberelf      Sha               125       70
+Osric the Cyberelf      Sha                91   Ragnar the Elf          Aid               236      145
+Ragnar the Elf          Aid                19   Osric the Cyberelf      Sha                70       51
+Osric the Cyberelf      Sha                37   Ragnar the Elf          Aid               145      108
+Ragnar the Elf          Aid                18   Osric the Cyberelf      Sha                51       33
+Osric the Cyberelf      Sha                98   Ragnar the Elf          Aid               108       10
+Ragnar the Elf          Aid                24   Osric the Cyberelf      Sha                33        9
+Osric the Cyberelf      Sha                10   Ragnar the Elf          Aid                10        0
+>> Osric the Cyberelf defeated Ragnar the Elf
+
+Aid Stats after the Battle
+Creature        Type          Strength    Health
+Morgas          demon              101         0
+Thorfin         cyberelf           239       118
+Petra           elf                262        92
+Karan           balrog             104       239
+Seren           cyberelf            95         0
+Lunara          elf                249         0
+Lagnar          elf                 70         0
+Orrin           demon              134        55
+Quillon         elf                160        18
+Morwen          balrog             145        70
+Chester         demon              235         0
+Ragnar          elf                 61         0
+Total health of Aid: 592
+
+Sha Stats after the Battle
+Creature        Type          Strength    Health
+Kaelith         demon              224        64
+Aldric          elf                217         0
+Grisha          demon              198         0
+Isolde          cyberelf            80         0
+Dorian          elf                194        20
+Hollis          cyberelf           204       118
+Faelan          balrog             259       205
+Cassia          balrog              53         0
+Bricta          cyberelf           147         0
+Varek           demon              111         0
+Nimue           balrog             236        72
+Osric           cyberelf           105         9
+Total health of Sha: 488
+==============================================================================
+>>> Aid wins the battle! <<<
+Aid overall health: 592
+Sha overall health: 488
+==============================================================================
+
+Fight a rematch with the same creatures? 1. Yes  2. No
 Enter your choice: 3
 
-Invalid menu choice
+Please enter a number between 1 and 2
+
+Fight a rematch with the same creatures? 1. Yes  2. No
+Enter your choice: 1
+
+Both armies have recovered; every creature's strength and health were re-rolled
+==============================================================================
+NEW BATTLE
+==============================================================================
+
+Aid Stats before the Battle
+Creature        Type          Strength    Health
+Morgas          demon              138        81
+Thorfin         cyberelf           132        69
+Petra           elf                149        69
+Karan           balrog             129        50
+Seren           cyberelf            50        30
+Lunara          elf                 30        32
+Lagnar          elf                 46       125
+Orrin           demon              121        42
+Quillon         elf                 99        44
+Morwen          balrog             131        73
+Chester         demon               77        38
+Ragnar          elf                132        42
+Total health of Aid: 695
+
+Sha Stats before the Battle
+Creature        Type          Strength    Health
+Kaelith         demon              132        73
+Aldric          elf                126        37
+Grisha          demon               37        87
+Isolde          cyberelf            91       133
+Dorian          elf                102       110
+Hollis          cyberelf            37        92
+Faelan          balrog             102       138
+Cassia          balrog              91        44
+Bricta          cyberelf           137        38
+Varek           demon               79        32
+Nimue           balrog             130       139
+Osric           cyberelf           100       146
+Total health of Sha: 1069
+
+Attacker                Army           Damage   Defender                Army           Before    After
+
+-- Duel 1: Morgas the Demon of Aid vs Kaelith the Demon of Sha --
+Morgas the Demon        Aid               103   Kaelith the Demon       Sha                73        0
+>> Morgas the Demon defeated Kaelith the Demon
+
+-- Duel 2: Thorfin the Cyberelf of Aid vs Aldric the Elf of Sha --
+Thorfin the Cyberelf    Aid                98   Aldric the Elf          Sha                37        0
+>> Thorfin the Cyberelf defeated Aldric the Elf
+
+-- Duel 3: Petra the Elf of Aid vs Grisha the Demon of Sha --
+Petra the Elf           Aid                95   Grisha the Demon        Sha                87        0
+>> Petra the Elf defeated Grisha the Demon
+
+-- Duel 4: Karan the Balrog of Aid vs Isolde the Cyberelf of Sha --
+Karan the Balrog        Aid                97   Isolde the Cyberelf     Sha               133       36
+Isolde the Cyberelf     Sha                30   Karan the Balrog        Aid                50       20
+Karan the Balrog        Aid               177   Isolde the Cyberelf     Sha                36        0
+>> Karan the Balrog defeated Isolde the Cyberelf
+
+-- Duel 5: Seren the Cyberelf of Aid vs Dorian the Elf of Sha --
+Dorian the Elf          Sha                62   Seren the Cyberelf      Aid                30        0
+>> Dorian the Elf defeated Seren the Cyberelf
+
+-- Duel 6: Lunara the Elf of Aid vs Hollis the Cyberelf of Sha --
+Lunara the Elf          Aid                28   Hollis the Cyberelf     Sha                92       64
+Hollis the Cyberelf     Sha               102   Lunara the Elf          Aid                32        0
+>> Hollis the Cyberelf defeated Lunara the Elf
+
+-- Duel 7: Lagnar the Elf of Aid vs Faelan the Balrog of Sha --
+Lagnar the Elf          Aid                18   Faelan the Balrog       Sha               138      120
+Faelan the Balrog       Sha                95   Lagnar the Elf          Aid               125       30
+Lagnar the Elf          Aid                22   Faelan the Balrog       Sha               120       98
+Faelan the Balrog       Sha               125   Lagnar the Elf          Aid                30        0
+>> Faelan the Balrog defeated Lagnar the Elf
+
+-- Duel 8: Orrin the Demon of Aid vs Cassia the Balrog of Sha --
+Orrin the Demon         Aid               104   Cassia the Balrog       Sha                44        0
+>> Orrin the Demon defeated Cassia the Balrog
+
+-- Duel 9: Quillon the Elf of Aid vs Bricta the Cyberelf of Sha --
+Quillon the Elf         Aid               182   Bricta the Cyberelf     Sha                38        0
+>> Quillon the Elf defeated Bricta the Cyberelf
+
+-- Duel 10: Morwen the Balrog of Aid vs Varek the Demon of Sha --
+Varek the Demon         Sha                67   Morwen the Balrog       Aid                73        6
+Morwen the Balrog       Aid               123   Varek the Demon         Sha                32        0
+>> Morwen the Balrog defeated Varek the Demon
+
+-- Duel 11: Chester the Demon of Aid vs Nimue the Balrog of Sha --
+Nimue the Balrog        Sha                93   Chester the Demon       Aid                38        0
+>> Nimue the Balrog defeated Chester the Demon
+
+-- Duel 12: Ragnar the Elf of Aid vs Osric the Cyberelf of Sha --
+Ragnar the Elf          Aid                44   Osric the Cyberelf      Sha               146      102
+Osric the Cyberelf      Sha                24   Ragnar the Elf          Aid                42       18
+Ragnar the Elf          Aid               119   Osric the Cyberelf      Sha               102        0
+>> Ragnar the Elf defeated Osric the Cyberelf
+
+Aid Stats after the Battle
+Creature        Type          Strength    Health
+Morgas          demon              138        81
+Thorfin         cyberelf           132        69
+Petra           elf                149        69
+Karan           balrog             129        20
+Seren           cyberelf            50         0
+Lunara          elf                 30         0
+Lagnar          elf                 46         0
+Orrin           demon              121        42
+Quillon         elf                 99        44
+Morwen          balrog             131         6
+Chester         demon               77         0
+Ragnar          elf                132        18
+Total health of Aid: 349
+
+Sha Stats after the Battle
+Creature        Type          Strength    Health
+Kaelith         demon              132         0
+Aldric          elf                126         0
+Grisha          demon               37         0
+Isolde          cyberelf            91         0
+Dorian          elf                102       110
+Hollis          cyberelf            37        64
+Faelan          balrog             102        98
+Cassia          balrog              91         0
+Bricta          cyberelf           137         0
+Varek           demon               79         0
+Nimue           balrog             130       139
+Osric           cyberelf           100         0
+Total health of Sha: 411
+==============================================================================
+>>> Sha wins the battle! <<<
+Aid overall health: 349
+Sha overall health: 411
+==============================================================================
+
+Fight a rematch with the same creatures? 1. Yes  2. No
+Enter your choice: !
+
+Invalid input; please enter a whole number
+
+Fight a rematch with the same creatures? 1. Yes  2. No
+Enter your choice: 2
 
 
 Battle Arena Menu:
 1. Play Game
 2. Quit
-Enter your choice: !
+Enter your choice: 3
 
-Invalid input; please enter a whole number
+Invalid menu choice
 
 
 Battle Arena Menu:
@@ -906,159 +1260,6 @@ Invalid input; please enter a whole number
 Battle Arena Menu:
 1. Play Game
 2. Quit
-Enter your choice: 1
-
-Enter the name of army #1 (3+ letters): a
-
-An army name needs at least 3 letters
-
-Enter the name of army #1 (3+ letters): 2
-
-An army name needs at least 3 letters
-
-Enter the name of army #1 (3+ letters): !
-
-An army name needs at least 3 letters
-
-Enter the name of army #1 (3+ letters): Army1
-Enter the name of army #2 (3+ letters): e
-
-An army name needs at least 3 letters
-Enter the name of army #2 (3+ letters): Army2
-Enter the number of creatures per army: -1
-
-Please enter a number between 1 and 12 between 1-12
-Enter the number of creatures per army between 1-12: 10
-==============================================================================
-NEW BATTLE
-==============================================================================
-
-Army1 Stats before the Battle
-Creature        Type          Strength    Health
-Morgas          demon              101       146
-Thorfin         cyberelf           239       118
-Petra           elf                262        94
-Karan           balrog             104       239
-Seren           cyberelf            95       244
-Lunara          elf                249        68
-Lagnar          elf                 70        63
-Orrin           demon              134       160
-Quillon         elf                160       209
-Morwen          balrog             145       158
-Total health of Army1: 1499
-
-Army2 Stats before the Battle
-Creature        Type          Strength    Health
-Chester         demon              235       220
-Ragnar          elf                 61       236
-Kaelith         demon              224       188
-Aldric          elf                217        64
-Grisha          demon              198        85
-Isolde          cyberelf            80        46
-Dorian          elf                194       186
-Hollis          cyberelf           204       118
-Faelan          balrog             259       246
-Cassia          balrog              53       221
-Total health of Army2: 1610
-
-Attacker                Army           Damage   Defender                Army           Before    After
-
--- Duel 1: Morgas the demon of Army1 vs Chester the demon of Army2 --
-Morgas the demon        Army1              62   Chester the demon       Army2             220      158
-Chester the demon       Army2             164   Morgas the demon        Army1             146        0
->> Chester the demon defeated Morgas the demon
-
--- Duel 2: Thorfin the cyberelf of Army1 vs Ragnar the elf of Army2 --
-Ragnar the elf          Army2              52   Thorfin the cyberelf    Army1             118       66
-Thorfin the cyberelf    Army1             172   Ragnar the elf          Army2             236       64
-Ragnar the elf          Army2              11   Thorfin the cyberelf    Army1              66       55
-Thorfin the cyberelf    Army1              89   Ragnar the elf          Army2              64        0
->> Thorfin the cyberelf defeated Ragnar the elf
-
--- Duel 3: Petra the elf of Army1 vs Kaelith the demon of Army2 --
-Petra the elf           Army1             127   Kaelith the demon       Army2             188       61
-Kaelith the demon       Army2             159   Petra the elf           Army1              94        0
->> Kaelith the demon defeated Petra the elf
-
--- Duel 4: Karan the balrog of Army1 vs Aldric the elf of Army2 --
-Karan the balrog        Army1              81   Aldric the elf          Army2              64        0
->> Karan the balrog defeated Aldric the elf
-
--- Duel 5: Seren the cyberelf of Army1 vs Grisha the demon of Army2 --
-Seren the cyberelf      Army1               2   Grisha the demon        Army2              85       83
-Grisha the demon        Army2               2   Seren the cyberelf      Army1             244      242
-Seren the cyberelf      Army1              69   Grisha the demon        Army2              83       14
-Grisha the demon        Army2              89   Seren the cyberelf      Army1             242      153
-Seren the cyberelf      Army1              53   Grisha the demon        Army2              14        0
->> Seren the cyberelf defeated Grisha the demon
-
--- Duel 6: Lunara the elf of Army1 vs Isolde the cyberelf of Army2 --
-Isolde the cyberelf     Army2              92   Lunara the elf          Army1              68        0
->> Isolde the cyberelf defeated Lunara the elf
-
--- Duel 7: Lagnar the elf of Army1 vs Dorian the elf of Army2 --
-Dorian the elf          Army2             149   Lagnar the elf          Army1              63        0
->> Dorian the elf defeated Lagnar the elf
-
--- Duel 8: Orrin the demon of Army1 vs Hollis the cyberelf of Army2 --
-Orrin the demon         Army1              34   Hollis the cyberelf     Army2             118       84
-Hollis the cyberelf     Army2             108   Orrin the demon         Army1             160       52
-Orrin the demon         Army1              56   Hollis the cyberelf     Army2              84       28
-Hollis the cyberelf     Army2              13   Orrin the demon         Army1              52       39
-Orrin the demon         Army1               1   Hollis the cyberelf     Army2              28       27
-Hollis the cyberelf     Army2              51   Orrin the demon         Army1              39        0
->> Hollis the cyberelf defeated Orrin the demon
-
--- Duel 9: Quillon the elf of Army1 vs Faelan the balrog of Army2 --
-Quillon the elf         Army1             145   Faelan the balrog       Army2             246      101
-Faelan the balrog       Army2             265   Quillon the elf         Army1             209        0
->> Faelan the balrog defeated Quillon the elf
-
--- Duel 10: Morwen the balrog of Army1 vs Cassia the balrog of Army2 --
-Cassia the balrog       Army2              70   Morwen the balrog       Army1             158       88
-Morwen the balrog       Army1             128   Cassia the balrog       Army2             221       93
-Cassia the balrog       Army2              33   Morwen the balrog       Army1              88       55
-Morwen the balrog       Army1             171   Cassia the balrog       Army2              93        0
->> Morwen the balrog defeated Cassia the balrog
-
-Army1 Stats after the Battle
-Creature        Type          Strength    Health
-Morgas          demon              101         0
-Thorfin         cyberelf           239        55
-Petra           elf                262         0
-Karan           balrog             104       239
-Seren           cyberelf            95       153
-Lunara          elf                249         0
-Lagnar          elf                 70         0
-Orrin           demon              134         0
-Quillon         elf                160         0
-Morwen          balrog             145        55
-Total health of Army1: 502
-
-Army2 Stats after the Battle
-Creature        Type          Strength    Health
-Chester         demon              235       158
-Ragnar          elf                 61         0
-Kaelith         demon              224        61
-Aldric          elf                217         0
-Grisha          demon              198         0
-Isolde          cyberelf            80        46
-Dorian          elf                194       186
-Hollis          cyberelf           204        27
-Faelan          balrog             259       101
-Cassia          balrog              53         0
-Total health of Army2: 579
-==============================================================================
->>> Army2 wins the battle! <<<
-Army1 overall health: 502
-Army2 overall health: 579
-==============================================================================
-
-
-Battle Arena Menu:
-1. Play Game
-2. Quit
 Enter your choice: 2
 
-Thanks for playing. Goodbye!
-aidentsang@Aidens-MacBook-Pro CS216_L7_AT % */
+Thanks for playing. Goodbye! */
