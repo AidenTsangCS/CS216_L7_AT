@@ -1,25 +1,32 @@
 // Aiden Tsang
-// CS216 Lab 7
-// clang-format off
+// CS216 Lab 7 - creature inheritance and army battles
 
+#include <cctype>
 #include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <new>
 #include <sstream>
 #include <string>
 
 using namespace std;
 
+// creature values
+const string DEFAULT_NAME = "n/a";
+const string INVALID_NAME = "";
+const int INVALID_STAT = -1;
 const int MIN_ARMY_STAT = 45;
 const int MAX_ARMY_STAT = 275;
 const int MIN_RESET_STAT = 30;
 const int MAX_RESET_STAT = 150;
 const int MIN_VALID_STRENGTH = 1;
 const int MIN_VALID_HEALTH = 0;
+const int DEFAULT_STAT = MIN_ARMY_STAT;
+const int MIN_DAMAGE = 1;
 
+// special attack rules
 const int PERCENT_ROLL = 100;
 const int DEMON_BONUS_CHANCE = 15;
 const int DEMON_BONUS_DAMAGE = 40;
@@ -29,122 +36,150 @@ const int ELF_MULTIPLIER = 2;
 const int CYBERELF_BONUS_CHANCE = 30;
 const int CYBERELF_BONUS_DAMAGE = 50;
 
-const string DEFAULT_NAME = "n/a";
-const int DEFAULT_STAT = MIN_ARMY_STAT;
-const string INVALID_NAME = "";
-const int INVALID_STAT = -1;
-
-const string DEFAULT_ARMY_NAME = "Unnamed";
+// army values
+const string DEFAULT_ARMY_NAME = "n/a";
 const int DEFAULT_ARMY_SIZE = 0;
 const int MIN_ARMY_SIZE = 1;
 const int MAX_ARMY_SIZE = 12;
-const int MIN_ARMY_NAME_ALPHA = 3;
+const int MIN_ARMY_NAME_LETTERS = 3;
+const int MAX_ARMY_NAME_LETTERS = 9;
+const int ARMIES_PER_BATTLE = 2;
+const int FIRST_NAME_INDEX = 0;
 
-const string CREATURE_TYPE_NAMES[] = {"demon", "balrog", "elf", "cyberelf"};
-const int NUM_TYPES = 4;
-
+// input file
 const string NAMES_FILE = "in_creature_names.txt";
-const int NAME_COL = 16;
+
+// screen formatting
+const int ID_COL = 12;
 const int TYPE_COL = 12;
-const int NUM_COL = 10;
-const int DUEL_NAME_COL = 24;
-const int DUEL_ARMY_COL = 12;
-const int DUEL_NUM_COL = 9;
-const int DIVIDER_WIDTH = 78;
+const int STAT_COL = 10;
+const int FIGHTER_COL = 23;
+const int ARMY_COL = 10;
+const int NUM_COL = 7;
+const int STATS_WIDTH = ID_COL + TYPE_COL + STAT_COL + STAT_COL;
+const int DUEL_WIDTH = FIGHTER_COL + ARMY_COL + NUM_COL + FIGHTER_COL + ARMY_COL + NUM_COL + NUM_COL;
 const char DIVIDER_CHAR = '=';
 
-const unsigned int RANDOM_SEED = 216;
-const int COIN_FLIP = 2;
-const int LETTER_CASE_OFFSET = 'a' - 'A';
+// prompts and messages
+const string MENU_PROMPT = "\n\nBattle Arena Menu:\n1. Play game\n2. Quit\nEnter your choice: ";
+const string REMATCH_PROMPT = "\n\nRematch Menu:\n1. Fight again with the same creatures\n2. Back to the main menu\nEnter your choice: ";
+const string SIZE_RULE = " (" + to_string(MIN_ARMY_SIZE) + " to " + to_string(MAX_ARMY_SIZE) + "): ";
+const string NAME_RULE = " (" + to_string(MIN_ARMY_NAME_LETTERS) + " to " + to_string(MAX_ARMY_NAME_LETTERS) + " letters): ";
+const string SIZE_PROMPT = "\nEnter the number of creatures in each army" + SIZE_RULE;
+const string ARMY_ONE_PROMPT = "Enter the name of army #1" + NAME_RULE;
+const string ARMY_TWO_PROMPT = "Enter the name of army #2" + NAME_RULE;
+const string BEFORE_LABEL = "before the Battle";
+const string AFTER_LABEL = "after the Battle";
+const string INVALID_CHOICE_MESSAGE = "Invalid menu choice; please pick a listed option";
 
-enum MenuOption { PLAY = 1, QUIT };
-enum RematchOption { REMATCH_YES = 1, REMATCH_NO };
-enum CreatureType { DEMON, BALROG, ELF, CYBERELF };
+enum MenuOption
+{
+    PLAY = 1,
+    QUIT
+};
 
-class Creature {
-  private:
+enum RematchOption
+{
+    REMATCH_YES = 1,
+    REMATCH_NO
+};
+
+enum CreatureType
+{
+    CREATURE,
+    DEMON,
+    BALROG,
+    ELF,
+    CYBERELF
+};
+
+const string CREATURE_TYPE_NAMES[] = {"creature", "demon", "balrog", "elf", "cyberelf"};
+
+class Creature
+{
+protected:
     string name = DEFAULT_NAME;
     int strength = DEFAULT_STAT;
     int health = DEFAULT_STAT;
 
-  public:
+private:
+    void assignCreature(const string &newName, int newStrength, int newHealth);
+
+public:
     Creature();
     Creature(const string &newName, int newStrength, int newHealth);
     virtual ~Creature();
 
     void setCreature(const string &newName, int newStrength, int newHealth);
-    void setName(const string &newName);
-    void setStrength(int newStrength);
-    void setHealth(int newHealth);
     void reset();
+    void takeDamage(int damageTaken);
 
     string getId() const;
     int getStrength() const;
     int getHealth() const;
+    string getTypeName() const;
+    string getName() const;
+    string toString() const;
 
-    virtual string getTypeName() const;
-    virtual string getName() const;
+    virtual CreatureType getType() const;
     virtual int getDamage() const;
-    virtual string toString() const;
-    virtual Creature *clone() const;
 };
 
-class Demon : public Creature {
-  public:
+class Demon : public Creature
+{
+public:
     Demon();
     Demon(const string &newName, int newStrength, int newHealth);
-    ~Demon();
 
-    string getTypeName() const;
+    CreatureType getType() const;
     int getDamage() const;
-    Creature *clone() const;
 };
 
-class Balrog : public Creature {
-  public:
+class Balrog : public Creature
+{
+public:
     Balrog();
     Balrog(const string &newName, int newStrength, int newHealth);
-    ~Balrog();
 
-    string getTypeName() const;
+    CreatureType getType() const;
     int getDamage() const;
-    Creature *clone() const;
 };
 
-class Elf : public Creature {
-  public:
+class Elf : public Creature
+{
+public:
     Elf();
     Elf(const string &newName, int newStrength, int newHealth);
-    ~Elf();
 
-    string getTypeName() const;
+    CreatureType getType() const;
     int getDamage() const;
-    Creature *clone() const;
 };
 
-class Cyberelf : public Elf {
-  public:
+class Cyberelf : public Elf
+{
+public:
     Cyberelf();
     Cyberelf(const string &newName, int newStrength, int newHealth);
-    ~Cyberelf();
 
-    string getTypeName() const;
+    CreatureType getType() const;
     int getDamage() const;
-    Creature *clone() const;
 };
 
-class Army {
-  private:
+class Army
+{
+private:
     string name = DEFAULT_ARMY_NAME;
     int size = DEFAULT_ARMY_SIZE;
     Creature **ppCreatures = nullptr;
 
     void setArmy(const string &newName, int newSize, Creature **ppNewCreatures);
-    void releaseMemory();
-    bool fillCreatures(Creature **&ppTemp, int count, const string *pNames, int startIndex) const;
-    bool copyCreatures(Creature **&ppTemp, const Army &rhs) const;
+    void copyArmy(const Army &rhs);
+    CreatureType randomType() const;
+    Creature *createCreature(CreatureType type, const string &newName, int newStrength, int newHealth) const;
+    Creature **buildCreatures(int newSize, const Army *pSource, const string *pNames, int startIndex) const;
+    void releaseCreatures(Creature **&ppList, int count) const;
 
-  public:
+public:
     Army();
     Army(const Army &rhs);
     ~Army();
@@ -161,49 +196,53 @@ class Army {
     void print(const string &label) const;
 };
 
-class Game {
-  private:
-    Army army1;
-    Army army2;
+class Game
+{
+private:
+    Army armyOne;
+    Army armyTwo;
 
-    void runBattle(const string *pNames, int nameCount);
-    void fightRound(int armySize);
+    string *loadNames(int neededCount) const;
+    bool buildArmies(int armySize, const string *pNames);
+    void runBattleSeries(int armySize);
+    void runBattle(int armySize);
     void runDuel(int position);
-    void performStrike(Creature *pAttacker, const string &attackerArmy, Creature *pDefender, const string &defenderArmy) const;
+    void exchangeBlows(Creature *pAttacker, const string &attackerArmy, Creature *pDefender, const string &defenderArmy) const;
+    void strike(Creature *pAttacker, const string &attackerArmy, Creature *pDefender, const string &defenderArmy) const;
     void printDuelHeader() const;
+    void announceDuelWinner(const Creature *pFirst, const Creature *pSecond) const;
     void announceWinner() const;
 
-  public:
+public:
     Game();
 
     void play();
 };
 
-void clearCin(const string &errorMessage);
+void clearFailedCin(const string &errorMessage);
 int readInt(const string &prompt, int minVal, int maxVal);
 string readArmyName(const string &prompt);
 int countAlphabetic(const string &text);
 string capitalizeFirst(const string &text);
-int randomStat();
-CreatureType randomType();
-Creature *createCreature(CreatureType type, const string &creatureName, int newStrength, int newHealth);
-Creature **allocatePointerArray(int count);
-void releaseArray(Creature **&ppList, int count);
-string *loadNames(const string &fileName, int &nameCount);
-void printDivider();
+int randomInRange(int minVal, int maxVal);
+bool isChanceHit(int chancePercent);
+void printDivider(int width);
 
-int main() {
-    srand(RANDOM_SEED);
+int main()
+{
+    srand(static_cast<unsigned int>(time(nullptr)));
 
-    try {
+    try
+    {
         Game battleGame;
-        int menuChoice = 0;
-        string menuPrompt = "\n\nBattle Arena Menu:\n1. Play Game\n2. Quit\nEnter your choice: ";
+        int menuChoice = QUIT;
 
-        do {
-            menuChoice = readInt(menuPrompt, numeric_limits<int>::min(), numeric_limits<int>::max());
+        do
+        {
+            menuChoice = readInt(MENU_PROMPT, numeric_limits<int>::min(), numeric_limits<int>::max());
 
-            switch (menuChoice) {
+            switch (menuChoice)
+            {
             case PLAY:
                 battleGame.play();
                 break;
@@ -211,650 +250,465 @@ int main() {
                 cout << "\nThanks for playing. Goodbye!" << endl;
                 break;
             default:
-                clearCin("Invalid menu choice");
+                clearFailedCin(INVALID_CHOICE_MESSAGE);
             }
         } while (menuChoice != QUIT);
     }
-    catch (const bad_alloc &error) {
+    catch (const bad_alloc &error)
+    {
         cout << "\nThe program ran out of memory and cannot continue" << endl;
     }
 
     return 0;
 }
 
-Creature::Creature() {
+// Builds a creature with default values.
+// Pre: none
+// Post: the creature holds the default name and stats
+Creature::Creature()
+{
     setCreature(DEFAULT_NAME, DEFAULT_STAT, DEFAULT_STAT);
 }
 
-Creature::Creature(const string &newName, int newStrength, int newHealth) {
+// Builds a creature from the incoming values.
+// Pre: none
+// Post: the creature holds the incoming values when they are valid, the default values otherwise
+Creature::Creature(const string &newName, int newStrength, int newHealth)
+{
     setCreature(newName, newStrength, newHealth);
 }
 
-Creature::~Creature() {
-    name = INVALID_NAME;
-    strength = INVALID_STAT;
-    health = INVALID_STAT;
+// Marks the creature as unusable when its lifetime ends.
+// Pre: none
+// Post: all member variables hold invalid values
+Creature::~Creature()
+{
+    assignCreature(INVALID_NAME, INVALID_STAT, INVALID_STAT);
 }
 
-void Creature::setCreature(const string &newName, int newStrength, int newHealth) {
-    bool isValid = newName.length() > 0 && newStrength >= MIN_VALID_STRENGTH && newHealth >= MIN_VALID_HEALTH;
+// Stores incoming values without validating them; used by the validating setter and the d'tor.
+// Pre: none
+// Post: all member variables hold the incoming values
+void Creature::assignCreature(const string &newName, int newStrength, int newHealth)
+{
+    name = newName;
+    strength = newStrength;
+    health = newHealth;
+}
 
-    if (!isValid) {
-        cout << "\nInvalid creature data; keeping current values" << endl;
+// Sets every member variable of the creature.
+// Pre: none
+// Post: all member variables hold the incoming values, or none of them change when any value is invalid
+void Creature::setCreature(const string &newName, int newStrength, int newHealth)
+{
+    bool isValid = countAlphabetic(newName) > 0 && newStrength >= MIN_VALID_STRENGTH && newHealth >= MIN_VALID_HEALTH;
+
+    if (!isValid)
+    {
+        cout << "\nInvalid creature record; " << name << " was left unchanged" << endl;
     }
-    else {
-        name = newName;
-        strength = newStrength;
-        health = newHealth;
+    else
+    {
+        assignCreature(newName, newStrength, newHealth);
     }
 }
 
-void Creature::setName(const string &newName) {
-    setCreature(newName, strength, health);
-}
-
-void Creature::setStrength(int newStrength) {
-    setCreature(name, newStrength, health);
-}
-
-void Creature::setHealth(int newHealth) {
-    setCreature(name, strength, newHealth);
-}
-
-void Creature::reset() {
-    int newStrength = (rand() % (MAX_RESET_STAT - MIN_RESET_STAT + 1)) + MIN_RESET_STAT;
-    int newHealth = (rand() % (MAX_RESET_STAT - MIN_RESET_STAT + 1)) + MIN_RESET_STAT;
+// Rolls new strength and health so the creature can fight again.
+// Pre: none
+// Post: strength and health hold new values between MIN_RESET_STAT and MAX_RESET_STAT
+void Creature::reset()
+{
+    int newStrength = randomInRange(MIN_RESET_STAT, MAX_RESET_STAT);
+    int newHealth = randomInRange(MIN_RESET_STAT, MAX_RESET_STAT);
 
     setCreature(name, newStrength, newHealth);
 }
 
-string Creature::getId() const {
+// Lowers the creature's health by the damage of one attack.
+// Pre: damageTaken >= 0
+// Post: health drops by damageTaken and never falls below MIN_VALID_HEALTH
+void Creature::takeDamage(int damageTaken)
+{
+    int newHealth = health - damageTaken;
+
+    if (newHealth < MIN_VALID_HEALTH)
+    {
+        newHealth = MIN_VALID_HEALTH;
+    }
+
+    setCreature(name, strength, newHealth);
+}
+
+// Returns the creature's id.
+// Pre: none
+// Post: the creature is unchanged
+string Creature::getId() const
+{
     return name;
 }
 
-int Creature::getStrength() const {
+// Returns the creature's strength.
+// Pre: none
+// Post: the creature is unchanged
+int Creature::getStrength() const
+{
     return strength;
 }
 
-int Creature::getHealth() const {
+// Returns the creature's health.
+// Pre: none
+// Post: the creature is unchanged
+int Creature::getHealth() const
+{
     return health;
 }
 
-string Creature::getTypeName() const {
-    return "creature";
+// Returns the class name of the creature, for example "cyberelf".
+// Pre: none
+// Post: the creature is unchanged
+string Creature::getTypeName() const
+{
+    return CREATURE_TYPE_NAMES[getType()];
 }
 
-string Creature::getName() const {
+// Returns the id followed by the class name, for example "Morgas the Demon".
+// Pre: none
+// Post: the creature is unchanged
+string Creature::getName() const
+{
     return name + " the " + capitalizeFirst(getTypeName());
 }
 
-int Creature::getDamage() const {
-    return (rand() % strength) + 1;
+// Returns one formatted table row for the creature.
+// Pre: none
+// Post: the creature is unchanged
+string Creature::toString() const
+{
+    ostringstream row;
+
+    row << left << setw(ID_COL) << name << setw(TYPE_COL) << getTypeName() << right << setw(STAT_COL) << strength << setw(STAT_COL) << health;
+
+    return row.str();
 }
 
-string Creature::toString() const {
-    ostringstream oss;
-
-    oss << left << setw(NAME_COL) << name << setw(TYPE_COL) << getTypeName() << right << setw(NUM_COL) << strength << setw(NUM_COL) << health;
-
-    return oss.str();
+// Returns the type of this object so the army can rebuild and label it.
+// Pre: none
+// Post: the creature is unchanged
+CreatureType Creature::getType() const
+{
+    return CREATURE;
 }
 
-Creature *Creature::clone() const {
-    return new Creature(*this);
+// Returns the basic damage every creature inflicts.
+// Pre: none
+// Post: the creature is unchanged
+int Creature::getDamage() const
+{
+    return randomInRange(MIN_DAMAGE, strength);
 }
 
-Demon::Demon() : Creature() {
+// Builds a demon with default values.
+// Pre: none
+// Post: the demon holds the default name and stats
+Demon::Demon() : Creature()
+{
 }
 
-Demon::Demon(const string &newName, int newStrength, int newHealth) : Creature(newName, newStrength, newHealth) {
+// Builds a demon from the incoming values.
+// Pre: none
+// Post: the demon holds the incoming values when they are valid, the default values otherwise
+Demon::Demon(const string &newName, int newStrength, int newHealth) : Creature(newName, newStrength, newHealth)
+{
 }
 
-Demon::~Demon() {
+// Returns the type of this object.
+// Pre: none
+// Post: the demon is unchanged
+CreatureType Demon::getType() const
+{
+    return DEMON;
 }
 
-string Demon::getTypeName() const {
-    return CREATURE_TYPE_NAMES[DEMON];
-}
-
-int Demon::getDamage() const {
+// Returns the basic damage plus the demonic attack bonus.
+// Pre: none
+// Post: the demon is unchanged
+int Demon::getDamage() const
+{
     int damage = Creature::getDamage();
 
-    if ((rand() % PERCENT_ROLL) < DEMON_BONUS_CHANCE) {
+    if (isChanceHit(DEMON_BONUS_CHANCE))
+    {
         damage = damage + DEMON_BONUS_DAMAGE;
     }
 
     return damage;
 }
 
-Creature *Demon::clone() const {
-    return new Demon(*this);
+// Builds a balrog with default values.
+// Pre: none
+// Post: the balrog holds the default name and stats
+Balrog::Balrog() : Creature()
+{
 }
 
-Balrog::Balrog() : Creature() {
+// Builds a balrog from the incoming values.
+// Pre: none
+// Post: the balrog holds the incoming values when they are valid, the default values otherwise
+Balrog::Balrog(const string &newName, int newStrength, int newHealth) : Creature(newName, newStrength, newHealth)
+{
 }
 
-Balrog::Balrog(const string &newName, int newStrength, int newHealth) : Creature(newName, newStrength, newHealth) {
+// Returns the type of this object.
+// Pre: none
+// Post: the balrog is unchanged
+CreatureType Balrog::getType() const
+{
+    return BALROG;
 }
 
-Balrog::~Balrog() {
-}
-
-string Balrog::getTypeName() const {
-    return CREATURE_TYPE_NAMES[BALROG];
-}
-
-int Balrog::getDamage() const {
+// Returns the damage of the two attacks a balrog lands in one turn.
+// Pre: none
+// Post: the balrog is unchanged
+int Balrog::getDamage() const
+{
     int damage = 0;
 
-    for (int strike = 0; strike < BALROG_ATTACKS; ++strike) {
+    for (int strikeCount = 0; strikeCount < BALROG_ATTACKS; ++strikeCount)
+    {
         damage = damage + Creature::getDamage();
     }
 
     return damage;
 }
 
-Creature *Balrog::clone() const {
-    return new Balrog(*this);
+// Builds an elf with default values.
+// Pre: none
+// Post: the elf holds the default name and stats
+Elf::Elf() : Creature()
+{
 }
 
-Elf::Elf() : Creature() {
+// Builds an elf from the incoming values.
+// Pre: none
+// Post: the elf holds the incoming values when they are valid, the default values otherwise
+Elf::Elf(const string &newName, int newStrength, int newHealth) : Creature(newName, newStrength, newHealth)
+{
 }
 
-Elf::Elf(const string &newName, int newStrength, int newHealth) : Creature(newName, newStrength, newHealth) {
+// Returns the type of this object.
+// Pre: none
+// Post: the elf is unchanged
+CreatureType Elf::getType() const
+{
+    return ELF;
 }
 
-Elf::~Elf() {
-}
-
-string Elf::getTypeName() const {
-    return CREATURE_TYPE_NAMES[ELF];
-}
-
-int Elf::getDamage() const {
+// Returns the basic damage, doubled when the magical attack lands.
+// Pre: none
+// Post: the elf is unchanged
+int Elf::getDamage() const
+{
     int damage = Creature::getDamage();
 
-    if ((rand() % PERCENT_ROLL) < ELF_BONUS_CHANCE) {
+    if (isChanceHit(ELF_BONUS_CHANCE))
+    {
         damage = damage * ELF_MULTIPLIER;
     }
 
     return damage;
 }
 
-Creature *Elf::clone() const {
-    return new Elf(*this);
+// Builds a cyberelf with default values.
+// Pre: none
+// Post: the cyberelf holds the default name and stats
+Cyberelf::Cyberelf() : Elf()
+{
 }
 
-Cyberelf::Cyberelf() : Elf() {
+// Builds a cyberelf from the incoming values.
+// Pre: none
+// Post: the cyberelf holds the incoming values when they are valid, the default values otherwise
+Cyberelf::Cyberelf(const string &newName, int newStrength, int newHealth) : Elf(newName, newStrength, newHealth)
+{
 }
 
-Cyberelf::Cyberelf(const string &newName, int newStrength, int newHealth) : Elf(newName, newStrength, newHealth) {
+// Returns the type of this object.
+// Pre: none
+// Post: the cyberelf is unchanged
+CreatureType Cyberelf::getType() const
+{
+    return CYBERELF;
 }
 
-Cyberelf::~Cyberelf() {
-}
-
-string Cyberelf::getTypeName() const {
-    return CREATURE_TYPE_NAMES[CYBERELF];
-}
-
-int Cyberelf::getDamage() const {
+// Returns the elf damage plus the cyber attack bonus.
+// Pre: none
+// Post: the cyberelf is unchanged
+int Cyberelf::getDamage() const
+{
     int damage = Elf::getDamage();
 
-    if ((rand() % PERCENT_ROLL) < CYBERELF_BONUS_CHANCE) {
+    if (isChanceHit(CYBERELF_BONUS_CHANCE))
+    {
         damage = damage + CYBERELF_BONUS_DAMAGE;
     }
 
     return damage;
 }
 
-Creature *Cyberelf::clone() const {
-    return new Cyberelf(*this);
-}
-
-Army::Army() {
+// Builds an empty army.
+// Pre: none
+// Post: the army holds the default name, no creatures, and a null pointer
+Army::Army()
+{
     setArmy(DEFAULT_ARMY_NAME, DEFAULT_ARMY_SIZE, nullptr);
 }
 
-Army::Army(const Army &rhs) {
-    if (rhs.size > 0 && rhs.ppCreatures != nullptr) {
-        Creature **ppTemp = allocatePointerArray(rhs.size);
-
-        if (ppTemp != nullptr && copyCreatures(ppTemp, rhs)) {
-            setArmy(rhs.name, rhs.size, ppTemp);
-        }
-        else {
-            cout << "\nCould not copy the army; an empty army was created instead" << endl;
-        }
-    }
+// Builds an army that owns its own copy of every creature of the incoming army.
+// Pre: none
+// Post: the army is a full copy of rhs, or an empty army when memory runs out
+Army::Army(const Army &rhs)
+{
+    copyArmy(rhs);
 }
 
-Army::~Army() {
-    releaseMemory();
-    name = DEFAULT_ARMY_NAME;
+// Releases every creature the army owns.
+// Pre: none
+// Post: all dynamic memory is released and all member variables hold invalid values
+Army::~Army()
+{
+    releaseCreatures(ppCreatures, size);
+    setArmy(INVALID_NAME, DEFAULT_ARMY_SIZE, nullptr);
 }
 
-Army &Army::operator=(const Army &rhs) {
-    if (this != &rhs) {
-        Creature **ppTemp = allocatePointerArray(rhs.size);
-
-        if (ppTemp != nullptr && copyCreatures(ppTemp, rhs)) {
-            releaseMemory();
-            setArmy(rhs.name, rhs.size, ppTemp);
-        }
-        else {
-            cout << "\nCould not copy the army; the original army was left unchanged" << endl;
-        }
+// Replaces this army with a copy of the incoming army.
+// Pre: none
+// Post: this army is a full copy of rhs, or it is left unchanged when memory runs out
+Army &Army::operator=(const Army &rhs)
+{
+    if (this != &rhs)
+    {
+        copyArmy(rhs);
     }
 
     return *this;
 }
 
-void Army::setArmy(const string &newName, int newSize, Creature **ppNewCreatures) {
+// Stores incoming values without validating them; used by the c'tors and the builders.
+// Pre: ppNewCreatures points to newSize creatures or is nullptr
+// Post: all member variables hold the incoming values
+void Army::setArmy(const string &newName, int newSize, Creature **ppNewCreatures)
+{
     name = newName;
     size = newSize;
     ppCreatures = ppNewCreatures;
 }
 
-void Army::releaseMemory() {
-    releaseArray(ppCreatures, size);
-    size = DEFAULT_ARMY_SIZE;
-}
-
-bool Army::fillCreatures(Creature **&ppTemp, int count, const string *pNames, int startIndex) const {
-    bool isSuccess = true;
-
-    for (int i = 0; i < count && isSuccess; ++i) {
-        try {
-            ppTemp[i] = createCreature(randomType(), pNames[startIndex + i], randomStat(), randomStat());
-        }
-        catch (const bad_alloc &error) {
-            isSuccess = false;
-        }
+// Copies the incoming army; shared by the copy c'tor and the copy assignment operator.
+// Pre: none
+// Post: this army owns a copy of every creature of rhs, or it is left unchanged when memory runs out
+void Army::copyArmy(const Army &rhs)
+{
+    if (rhs.ppCreatures == nullptr || rhs.size < MIN_ARMY_SIZE)
+    {
+        releaseCreatures(ppCreatures, size);
+        setArmy(rhs.name, DEFAULT_ARMY_SIZE, nullptr);
     }
+    else
+    {
+        Creature **ppTemp = buildCreatures(rhs.size, &rhs, nullptr, FIRST_NAME_INDEX);
 
-    if (!isSuccess) {
-        releaseArray(ppTemp, count);
-    }
-
-    return isSuccess;
-}
-
-bool Army::copyCreatures(Creature **&ppTemp, const Army &rhs) const {
-    bool isSuccess = true;
-
-    for (int i = 0; i < rhs.size && isSuccess; ++i) {
-        try {
-            ppTemp[i] = rhs.ppCreatures[i]->clone();
+        if (ppTemp == nullptr)
+        {
+            cout << "\nThe army could not be copied; " << name << " was left unchanged" << endl;
         }
-        catch (const bad_alloc &error) {
-            isSuccess = false;
-        }
-    }
-
-    if (!isSuccess) {
-        releaseArray(ppTemp, rhs.size);
-    }
-
-    return isSuccess;
-}
-
-bool Army::createArmy(const string &newName, int newSize, const string *pNames, int startIndex) {
-    bool isSuccess = false;
-    bool isValid = countAlphabetic(newName) >= MIN_ARMY_NAME_ALPHA && newSize >= MIN_ARMY_SIZE && newSize <= MAX_ARMY_SIZE && pNames != nullptr;
-
-    if (!isValid) {
-        cout << "\nInvalid army data; the army was not created" << endl;
-    }
-    else {
-        Creature **ppTemp = allocatePointerArray(newSize);
-
-        if (ppTemp != nullptr && fillCreatures(ppTemp, newSize, pNames, startIndex)) {
-            releaseMemory();
-            setArmy(newName, newSize, ppTemp);
-            isSuccess = true;
-        }
-        else {
-            cout << "\nCould not build the army; the previous army was left unchanged" << endl;
-        }
-    }
-
-    return isSuccess;
-}
-
-void Army::resetCreatures() {
-    if (ppCreatures != nullptr) {
-        for (int i = 0; i < size; ++i) {
-            ppCreatures[i]->reset();
+        else
+        {
+            releaseCreatures(ppCreatures, size);
+            setArmy(rhs.name, rhs.size, ppTemp);
         }
     }
 }
 
-string Army::getName() const {
-    return name;
+// Picks the type of the next creature to create.
+// Pre: none
+// Post: the army is unchanged
+CreatureType Army::randomType() const
+{
+    return static_cast<CreatureType>(randomInRange(DEMON, CYBERELF));
 }
 
-int Army::getSize() const {
-    return size;
-}
-
-int Army::getTotalHealth() const {
-    int total = 0;
-
-    for (int i = 0; i < size; ++i) {
-        total = total + ppCreatures[i]->getHealth();
-    }
-
-    return total;
-}
-
-Creature *Army::getCreature(int index) const {
-    Creature *pFound = nullptr;
-
-    if (ppCreatures != nullptr && index >= 0 && index < size) {
-        pFound = ppCreatures[index];
-    }
-
-    return pFound;
-}
-
-void Army::print(const string &label) const {
-    cout << "\n" << name << " Stats " << label << endl;
-
-    if (ppCreatures == nullptr || size == 0) {
-        cout << "This army is empty." << endl;
-    }
-    else {
-        cout << left << setw(NAME_COL) << "Creature" << setw(TYPE_COL) << "Type" << right << setw(NUM_COL) << "Strength" << setw(NUM_COL) << "Health" << endl;
-
-        for (int i = 0; i < size; ++i) {
-            cout << ppCreatures[i]->toString() << endl;
-        }
-
-        cout << "Total health of " << name << ": " << getTotalHealth() << endl;
-    }
-}
-
-Game::Game() {
-}
-
-void Game::play() {
-    int nameCount = 0;
-    string *pNames = loadNames(NAMES_FILE, nameCount);
-
-    if (pNames == nullptr) {
-        cout << "\nCould not read " << NAMES_FILE << "; the battle was cancelled" << endl;
-    }
-    else {
-        runBattle(pNames, nameCount);
-        delete[] pNames;
-        pNames = nullptr;
-    }
-}
-
-void Game::runBattle(const string *pNames, int nameCount) {
-    int maxSize = nameCount / COIN_FLIP;
-
-    if (maxSize > MAX_ARMY_SIZE) {
-        maxSize = MAX_ARMY_SIZE;
-    }
-
-    if (maxSize < MIN_ARMY_SIZE) {
-        cout << "\nThe name file does not hold enough names for a battle" << endl;
-    }
-    else {
-        string name1 = readArmyName("\nEnter the name of army #1 (3+ letters): ");
-        string name2 = readArmyName("Enter the name of army #2 (3+ letters): ");
-        int armySize = readInt("Enter the number of creatures per army: ", MIN_ARMY_SIZE, maxSize);
-        bool isReady = army1.createArmy(name1, armySize, pNames, 0);
-
-        if (isReady) {
-            isReady = army2.createArmy(name2, armySize, pNames, armySize);
-        }
-
-        if (!isReady) {
-            cout << "\nThe armies could not be built; returning to the menu" << endl;
-        }
-        else {
-            bool wantsRematch = true;
-
-            while (wantsRematch) {
-                fightRound(armySize);
-                wantsRematch = (readInt("\nFight a rematch with the same creatures? 1. Yes  2. No\nEnter your choice: ", REMATCH_YES, REMATCH_NO) == REMATCH_YES);
-
-                if (wantsRematch) {
-                    army1.resetCreatures();
-                    army2.resetCreatures();
-                    cout << "\nBoth armies have recovered; every creature's strength and health were re-rolled" << endl;
-                }
-            }
-        }
-    }
-}
-
-void Game::fightRound(int armySize) {
-    printDivider();
-    cout << "NEW BATTLE" << endl;
-    printDivider();
-
-    army1.print("before the Battle");
-    army2.print("before the Battle");
-    printDuelHeader();
-
-    for (int position = 0; position < armySize; ++position) {
-        runDuel(position);
-    }
-
-    army1.print("after the Battle");
-    army2.print("after the Battle");
-    announceWinner();
-}
-
-void Game::printDuelHeader() const {
-    cout << "\n" << left << setw(DUEL_NAME_COL) << "Attacker" << setw(DUEL_ARMY_COL) << "Army" << right << setw(DUEL_NUM_COL) << "Damage" << "   " << left << setw(DUEL_NAME_COL) << "Defender" << setw(DUEL_ARMY_COL) << "Army" << right << setw(DUEL_NUM_COL) << "Before" << setw(DUEL_NUM_COL) << "After" << endl;
-}
-
-void Game::runDuel(int position) {
-    Creature *pFirst = army1.getCreature(position);
-    Creature *pSecond = army2.getCreature(position);
-
-    if (pFirst == nullptr || pSecond == nullptr) {
-        cout << "\nDuel " << (position + 1) << " could not start; a creature was missing" << endl;
-    }
-    else {
-        Creature *pAttacker = pFirst;
-        Creature *pDefender = pSecond;
-        string attackerArmy = army1.getName();
-        string defenderArmy = army2.getName();
-
-        if ((rand() % COIN_FLIP) == 0) {
-            pAttacker = pSecond;
-            pDefender = pFirst;
-            attackerArmy = army2.getName();
-            defenderArmy = army1.getName();
-        }
-
-        cout << "\n-- Duel " << (position + 1) << ": " << pFirst->getName() << " of " << army1.getName() << " vs " << pSecond->getName() << " of " << army2.getName() << " --" << endl;
-
-        while (pFirst->getHealth() > 0 && pSecond->getHealth() > 0) {
-            performStrike(pAttacker, attackerArmy, pDefender, defenderArmy);
-
-            Creature *pSwapCreature = pAttacker;
-            pAttacker = pDefender;
-            pDefender = pSwapCreature;
-
-            string swapArmy = attackerArmy;
-            attackerArmy = defenderArmy;
-            defenderArmy = swapArmy;
-        }
-
-        bool isFirstAlive = pFirst->getHealth() > 0;
-        Creature *pWinner = pSecond;
-        Creature *pLoser = pFirst;
-
-        if (isFirstAlive) {
-            pWinner = pFirst;
-            pLoser = pSecond;
-        }
-
-        cout << ">> " << pWinner->getName() << " defeated " << pLoser->getName() << endl;
-    }
-}
-
-void Game::performStrike(Creature *pAttacker, const string &attackerArmy, Creature *pDefender, const string &defenderArmy) const {
-    int damage = pAttacker->getDamage();
-    int healthBefore = pDefender->getHealth();
-    int healthAfter = healthBefore - damage;
-
-    if (healthAfter < MIN_VALID_HEALTH) {
-        healthAfter = MIN_VALID_HEALTH;
-    }
-
-    pDefender->setHealth(healthAfter);
-
-    cout << left << setw(DUEL_NAME_COL) << pAttacker->getName() << setw(DUEL_ARMY_COL) << attackerArmy << right << setw(DUEL_NUM_COL) << damage << "   " << left << setw(DUEL_NAME_COL) << pDefender->getName() << setw(DUEL_ARMY_COL) << defenderArmy << right << setw(DUEL_NUM_COL) << healthBefore << setw(DUEL_NUM_COL) << pDefender->getHealth() << endl;
-}
-
-void Game::announceWinner() const {
-    int total1 = army1.getTotalHealth();
-    int total2 = army2.getTotalHealth();
-    string resultMessage = ">>> The battle ends in a tie! <<<";
-
-    if (total1 > total2) {
-        resultMessage = ">>> " + army1.getName() + " wins the battle! <<<";
-    }
-    else if (total2 > total1) {
-        resultMessage = ">>> " + army2.getName() + " wins the battle! <<<";
-    }
-
-    printDivider();
-    cout << resultMessage << "\n" << army1.getName() << " overall health: " << total1 << "\n" << army2.getName() << " overall health: " << total2 << endl;
-    printDivider();
-}
-
-void clearCin(const string &errorMessage) {
-    if (cin.fail()) {
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    }
-
-    cout << "\n" << errorMessage << endl;
-}
-
-int readInt(const string &prompt, int minVal, int maxVal) {
-    int inputVal = 0;
-    bool isValid = false;
-
-    while (!isValid) {
-        cout << prompt;
-        cin >> inputVal;
-
-        if (cin.fail()) {
-            clearCin("Invalid input; please enter a whole number");
-        }
-        else if (inputVal < minVal || inputVal > maxVal) {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "\nPlease enter a number between " << minVal << " and " << maxVal << endl;
-        }
-        else {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            isValid = true;
-        }
-    }
-
-    return inputVal;
-}
-
-string readArmyName(const string &prompt) {
-    string inputName = "";
-    bool isValid = false;
-
-    while (!isValid) {
-        cout << prompt;
-        getline(cin, inputName);
-
-        if (countAlphabetic(inputName) < MIN_ARMY_NAME_ALPHA) {
-            cout << "\nAn army name needs at least " << MIN_ARMY_NAME_ALPHA << " letters" << endl;
-        }
-        else {
-            isValid = true;
-        }
-    }
-
-    return inputName;
-}
-
-int countAlphabetic(const string &text) {
-    int count = 0;
-    int length = static_cast<int>(text.length());
-
-    for (int i = 0; i < length; ++i) {
-        char letter = text[i];
-
-        if ((letter >= 'A' && letter <= 'Z') || (letter >= 'a' && letter <= 'z')) {
-            ++count;
-        }
-    }
-
-    return count;
-}
-
-string capitalizeFirst(const string &text) {
-    string capitalized = text;
-
-    if (capitalized.length() > 0 && capitalized[0] >= 'a' && capitalized[0] <= 'z') {
-        capitalized[0] = static_cast<char>(capitalized[0] - LETTER_CASE_OFFSET);
-    }
-
-    return capitalized;
-}
-
-int randomStat() {
-    return (rand() % (MAX_ARMY_STAT - MIN_ARMY_STAT + 1)) + MIN_ARMY_STAT;
-}
-
-CreatureType randomType() {
-    return static_cast<CreatureType>(rand() % NUM_TYPES);
-}
-
-Creature *createCreature(CreatureType type, const string &creatureName, int newStrength, int newHealth) {
+// Creates one creature of the requested type.
+// Pre: none
+// Post: returns the address of a new creature; throws bad_alloc when memory runs out
+Creature *Army::createCreature(CreatureType type, const string &newName, int newStrength, int newHealth) const
+{
     Creature *pNew = nullptr;
 
-    switch (type) {
+    switch (type)
+    {
     case DEMON:
-        pNew = new Demon(creatureName, newStrength, newHealth);
+        pNew = new Demon(newName, newStrength, newHealth);
         break;
     case BALROG:
-        pNew = new Balrog(creatureName, newStrength, newHealth);
+        pNew = new Balrog(newName, newStrength, newHealth);
         break;
     case ELF:
-        pNew = new Elf(creatureName, newStrength, newHealth);
+        pNew = new Elf(newName, newStrength, newHealth);
         break;
     case CYBERELF:
-        pNew = new Cyberelf(creatureName, newStrength, newHealth);
+        pNew = new Cyberelf(newName, newStrength, newHealth);
+        break;
+    case CREATURE:
+        pNew = new Creature(newName, newStrength, newHealth);
         break;
     }
 
     return pNew;
 }
 
-Creature **allocatePointerArray(int count) {
+// Allocates the array of pointers and every creature in it, and handles its own allocation failures.
+// Pre: newSize >= MIN_ARMY_SIZE; pSource holds newSize creatures, or pNames holds newSize unused names from startIndex
+// Post: returns a full array of newSize creatures, or nullptr with all partial memory released
+Creature **Army::buildCreatures(int newSize, const Army *pSource, const string *pNames, int startIndex) const
+{
     Creature **ppTemp = nullptr;
 
-    try {
-        ppTemp = new Creature *[count] { nullptr };
+    try
+    {
+        ppTemp = new Creature *[newSize]
+        { nullptr };
+
+        for (int i = 0; i < newSize; ++i)
+        {
+            if (pSource == nullptr)
+            {
+                ppTemp[i] = createCreature(randomType(), pNames[startIndex + i], randomInRange(MIN_ARMY_STAT, MAX_ARMY_STAT), randomInRange(MIN_ARMY_STAT, MAX_ARMY_STAT));
+            }
+            else
+            {
+                Creature *pOriginal = pSource->ppCreatures[i];
+                ppTemp[i] = createCreature(pOriginal->getType(), pOriginal->getId(), pOriginal->getStrength(), pOriginal->getHealth());
+            }
+        }
     }
-    catch (const bad_alloc &error) {
-        cout << "\nMemory allocation failed for the array of creature pointers" << endl;
-        ppTemp = nullptr;
+    catch (const bad_alloc &error)
+    {
+        releaseCreatures(ppTemp, newSize);
+        cout << "\nMemory allocation failed while raising an army of " << newSize << " creatures" << endl;
     }
 
     return ppTemp;
 }
 
-void releaseArray(Creature **&ppList, int count) {
-    if (ppList != nullptr) {
-        for (int i = 0; i < count; ++i) {
+// Releases an array of creatures and the array of pointers that holds them.
+// Pre: ppList points to count creatures or is nullptr
+// Post: all dynamic memory is released and ppList holds nullptr
+void Army::releaseCreatures(Creature **&ppList, int count) const
+{
+    if (ppList != nullptr)
+    {
+        for (int i = 0; i < count; ++i)
+        {
             delete ppList[i];
             ppList[i] = nullptr;
         }
@@ -864,402 +718,912 @@ void releaseArray(Creature **&ppList, int count) {
     }
 }
 
-string *loadNames(const string &fileName, int &nameCount) {
-    string *pNames = nullptr;
-    string oneName = "";
-    int lineTotal = 0;
-    ifstream counter(fileName.c_str());
+// Raises a new army of randomly chosen creatures.
+// Pre: pNames holds newSize unused names starting at startIndex
+// Post: returns true and the army holds newSize new creatures, or returns false and the army is unchanged
+bool Army::createArmy(const string &newName, int newSize, const string *pNames, int startIndex)
+{
+    bool isSuccess = false;
+    bool isValid = countAlphabetic(newName) >= MIN_ARMY_NAME_LETTERS && newSize >= MIN_ARMY_SIZE && newSize <= MAX_ARMY_SIZE && pNames != nullptr && startIndex >= FIRST_NAME_INDEX;
 
-    nameCount = 0;
-
-    if (!counter.is_open()) {
-        cout << "\nCould not open " << fileName << endl;
+    if (!isValid)
+    {
+        cout << "\nInvalid army record; the army was not created" << endl;
     }
-    else {
-        while (getline(counter, oneName)) {
-            if (countAlphabetic(oneName) > 0) {
-                ++lineTotal;
-            }
+    else
+    {
+        Creature **ppTemp = buildCreatures(newSize, nullptr, pNames, startIndex);
+
+        if (ppTemp == nullptr)
+        {
+            cout << "\nThe army could not be raised; " << name << " was left unchanged" << endl;
+        }
+        else
+        {
+            releaseCreatures(ppCreatures, size);
+            setArmy(newName, newSize, ppTemp);
+            isSuccess = true;
+        }
+    }
+
+    return isSuccess;
+}
+
+// Heals every creature so the same army can fight another battle.
+// Pre: none
+// Post: every creature holds new strength and health values
+void Army::resetCreatures()
+{
+    if (ppCreatures != nullptr)
+    {
+        for (int i = 0; i < size; ++i)
+        {
+            ppCreatures[i]->reset();
+        }
+    }
+}
+
+// Returns the army's name.
+// Pre: none
+// Post: the army is unchanged
+string Army::getName() const
+{
+    return name;
+}
+
+// Returns the number of creatures in the army.
+// Pre: none
+// Post: the army is unchanged
+int Army::getSize() const
+{
+    return size;
+}
+
+// Returns the sum of the health of every creature in the army.
+// Pre: none
+// Post: the army is unchanged
+int Army::getTotalHealth() const
+{
+    int total = 0;
+
+    if (ppCreatures != nullptr)
+    {
+        for (int i = 0; i < size; ++i)
+        {
+            total = total + ppCreatures[i]->getHealth();
+        }
+    }
+
+    return total;
+}
+
+// Returns the creature standing in the requested position.
+// Pre: none
+// Post: returns nullptr when the position is outside the army
+Creature *Army::getCreature(int index) const
+{
+    Creature *pFound = nullptr;
+
+    if (ppCreatures != nullptr && index >= FIRST_NAME_INDEX && index < size)
+    {
+        pFound = ppCreatures[index];
+    }
+
+    return pFound;
+}
+
+// Prints the army roster as a table.
+// Pre: none
+// Post: the army is unchanged
+void Army::print(const string &label) const
+{
+    cout << "\n"
+         << name << " Stats " << label << endl;
+
+    if (ppCreatures == nullptr || size < MIN_ARMY_SIZE)
+    {
+        cout << "This army is empty" << endl;
+    }
+    else
+    {
+        cout << left << setw(ID_COL) << "Creature" << setw(TYPE_COL) << "Type" << right << setw(STAT_COL) << "Strength" << setw(STAT_COL) << "Health" << endl;
+        printDivider(STATS_WIDTH);
+
+        for (int i = 0; i < size; ++i)
+        {
+            cout << ppCreatures[i]->toString() << endl;
         }
 
-        counter.close();
+        printDivider(STATS_WIDTH);
+        cout << "Overall health of " << name << ": " << getTotalHealth() << endl;
+    }
+}
 
-        try {
-            pNames = new string[lineTotal];
+// Builds a game that holds two empty armies.
+// Pre: none
+// Post: both armies are empty
+Game::Game()
+{
+}
+
+// Runs one visit to the Battle menu option.
+// Pre: none
+// Post: the armies fight as long as the user asks for rematches
+void Game::play()
+{
+    int armySize = readInt(SIZE_PROMPT, MIN_ARMY_SIZE, MAX_ARMY_SIZE);
+    string *pNames = loadNames(armySize * ARMIES_PER_BATTLE);
+
+    if (pNames == nullptr)
+    {
+        cout << "\nThe battle was cancelled" << endl;
+    }
+    else
+    {
+        bool isReady = buildArmies(armySize, pNames);
+
+        delete[] pNames;
+        pNames = nullptr;
+
+        if (isReady)
+        {
+            runBattleSeries(armySize);
         }
-        catch (const bad_alloc &error) {
-            cout << "\nMemory allocation failed for the array of names" << endl;
-            pNames = nullptr;
+        else
+        {
+            cout << "\nThe armies could not be raised; returning to the main menu" << endl;
         }
+    }
+}
 
-        if (pNames != nullptr) {
-            ifstream reader(fileName.c_str());
+// Reads as many creature names as the two armies need.
+// Pre: neededCount > 0
+// Post: returns an array of neededCount names, or nullptr when the file or the memory is unavailable
+string *Game::loadNames(int neededCount) const
+{
+    string *pNames = nullptr;
+    string oneName = DEFAULT_NAME;
+    int nameCount = 0;
+    ifstream namesFile(NAMES_FILE.c_str());
 
-            while (getline(reader, oneName) && nameCount < lineTotal) {
-                if (countAlphabetic(oneName) > 0) {
+    if (!namesFile.is_open())
+    {
+        cout << "\nCould not open " << NAMES_FILE << endl;
+    }
+    else
+    {
+        try
+        {
+            pNames = new string[neededCount];
+
+            while (nameCount < neededCount && getline(namesFile, oneName))
+            {
+                if (countAlphabetic(oneName) > 0)
+                {
                     pNames[nameCount] = oneName;
                     ++nameCount;
                 }
             }
 
-            reader.close();
+            if (nameCount < neededCount)
+            {
+                delete[] pNames;
+                pNames = nullptr;
+                cout << "\n"
+                     << NAMES_FILE << " holds only " << nameCount << " of the " << neededCount << " names needed" << endl;
+            }
         }
+        catch (const bad_alloc &error)
+        {
+            pNames = nullptr;
+            cout << "\nMemory allocation failed while reading the creature names" << endl;
+        }
+
+        namesFile.close();
     }
 
     return pNames;
 }
 
-void printDivider() {
-    cout << setfill(DIVIDER_CHAR) << setw(DIVIDER_WIDTH) << "" << setfill(' ') << endl;
+// Names and raises both armies.
+// Pre: pNames holds armySize * ARMIES_PER_BATTLE names
+// Post: returns true when both armies are ready to fight
+bool Game::buildArmies(int armySize, const string *pNames)
+{
+    string nameOne = readArmyName(ARMY_ONE_PROMPT);
+    string nameTwo = readArmyName(ARMY_TWO_PROMPT);
+    bool isReady = armyOne.createArmy(nameOne, armySize, pNames, FIRST_NAME_INDEX);
+
+    if (isReady)
+    {
+        isReady = armyTwo.createArmy(nameTwo, armySize, pNames, armySize);
+    }
+
+    return isReady;
 }
 
-/*Output
+// Fights battles with the same two armies until the user leaves the Rematch menu.
+// Pre: both armies hold armySize creatures
+// Post: the creatures of both armies hold the results of the last battle
+void Game::runBattleSeries(int armySize)
+{
+    int rematchChoice = REMATCH_YES;
+
+    while (rematchChoice == REMATCH_YES)
+    {
+        runBattle(armySize);
+        rematchChoice = readInt(REMATCH_PROMPT, REMATCH_YES, REMATCH_NO);
+
+        switch (rematchChoice)
+        {
+        case REMATCH_YES:
+            armyOne.resetCreatures();
+            armyTwo.resetCreatures();
+            cout << "\nBoth armies recovered; every strength and health was rolled again" << endl;
+            break;
+        case REMATCH_NO:
+            cout << "\nReturning to the main menu" << endl;
+            break;
+        }
+    }
+}
+
+// Fights one full battle between the two armies.
+// Pre: both armies hold armySize creatures
+// Post: the roster of each army is printed before and after the duels and a winner is announced
+void Game::runBattle(int armySize)
+{
+    cout << "\n";
+    printDivider(DUEL_WIDTH);
+    cout << "NEW BATTLE" << endl;
+    printDivider(DUEL_WIDTH);
+
+    armyOne.print(BEFORE_LABEL);
+    armyTwo.print(BEFORE_LABEL);
+    printDuelHeader();
+
+    for (int position = 0; position < armySize; ++position)
+    {
+        runDuel(position);
+    }
+
+    armyOne.print(AFTER_LABEL);
+    armyTwo.print(AFTER_LABEL);
+    announceWinner();
+}
+
+// Prints the column headings of the duel table.
+// Pre: none
+// Post: the game is unchanged
+void Game::printDuelHeader() const
+{
+    cout << "\n"
+         << left << setw(FIGHTER_COL) << "Attacker" << setw(ARMY_COL) << "Army" << right << setw(NUM_COL) << "Damage" << "  " << left << setw(FIGHTER_COL) << "Defender" << setw(ARMY_COL) << "Army" << right << setw(NUM_COL) << "Before" << setw(NUM_COL) << "After" << endl;
+}
+
+// Fights the two creatures standing in the same position until one of them falls.
+// Pre: none
+// Post: the loser of the duel holds a health of MIN_VALID_HEALTH
+void Game::runDuel(int position)
+{
+    Creature *pFirst = armyOne.getCreature(position);
+    Creature *pSecond = armyTwo.getCreature(position);
+
+    if (pFirst == nullptr || pSecond == nullptr)
+    {
+        cout << "\nDuel " << (position + 1) << " could not start; a creature is missing" << endl;
+    }
+    else
+    {
+        cout << "\n-- Duel " << (position + 1) << ": " << pFirst->getName() << " of " << armyOne.getName() << " vs " << pSecond->getName() << " of " << armyTwo.getName() << " --" << endl;
+
+        if (isChanceHit(PERCENT_ROLL / ARMIES_PER_BATTLE))
+        {
+            exchangeBlows(pFirst, armyOne.getName(), pSecond, armyTwo.getName());
+        }
+        else
+        {
+            exchangeBlows(pSecond, armyTwo.getName(), pFirst, armyOne.getName());
+        }
+
+        announceDuelWinner(pFirst, pSecond);
+    }
+}
+
+// Lets the two creatures attack in turn until one of them falls.
+// Pre: both creatures hold a health above MIN_VALID_HEALTH
+// Post: one of the creatures holds a health of MIN_VALID_HEALTH
+void Game::exchangeBlows(Creature *pAttacker, const string &attackerArmy, Creature *pDefender, const string &defenderArmy) const
+{
+    Creature *pCurrent = pAttacker;
+    Creature *pTarget = pDefender;
+    string currentArmy = attackerArmy;
+    string targetArmy = defenderArmy;
+
+    while (pCurrent->getHealth() > MIN_VALID_HEALTH && pTarget->getHealth() > MIN_VALID_HEALTH)
+    {
+        strike(pCurrent, currentArmy, pTarget, targetArmy);
+
+        Creature *pNextAttacker = pTarget;
+        string nextArmy = targetArmy;
+
+        pTarget = pCurrent;
+        targetArmy = currentArmy;
+        pCurrent = pNextAttacker;
+        currentArmy = nextArmy;
+    }
+}
+
+// Lands one attack and prints the result as a table row.
+// Pre: none
+// Post: the health of the defender drops by the damage of the attack
+void Game::strike(Creature *pAttacker, const string &attackerArmy, Creature *pDefender, const string &defenderArmy) const
+{
+    int damage = pAttacker->getDamage();
+    int healthBefore = pDefender->getHealth();
+
+    pDefender->takeDamage(damage);
+
+    cout << left << setw(FIGHTER_COL) << pAttacker->getName() << setw(ARMY_COL) << attackerArmy << right << setw(NUM_COL) << damage << "  " << left << setw(FIGHTER_COL) << pDefender->getName() << setw(ARMY_COL) << defenderArmy << right << setw(NUM_COL) << healthBefore << setw(NUM_COL) << pDefender->getHealth() << endl;
+}
+
+// Announces the creature that survived the duel.
+// Pre: one of the creatures holds a health of MIN_VALID_HEALTH
+// Post: the game is unchanged
+void Game::announceDuelWinner(const Creature *pFirst, const Creature *pSecond) const
+{
+    const Creature *pWinner = pSecond;
+    const Creature *pLoser = pFirst;
+
+    if (pFirst->getHealth() > MIN_VALID_HEALTH)
+    {
+        pWinner = pFirst;
+        pLoser = pSecond;
+    }
+
+    cout << ">> " << pWinner->getName() << " defeated " << pLoser->getName() << endl;
+}
+
+// Announces the army with the larger overall health.
+// Pre: none
+// Post: the game is unchanged
+void Game::announceWinner() const
+{
+    int totalOne = armyOne.getTotalHealth();
+    int totalTwo = armyTwo.getTotalHealth();
+    string resultMessage = ">>> The battle ends in a tie <<<";
+
+    if (totalOne > totalTwo)
+    {
+        resultMessage = ">>> " + armyOne.getName() + " wins the battle <<<";
+    }
+    else if (totalTwo > totalOne)
+    {
+        resultMessage = ">>> " + armyTwo.getName() + " wins the battle <<<";
+    }
+
+    printDivider(DUEL_WIDTH);
+    cout << resultMessage << "\n"
+         << armyOne.getName() << " overall health: " << totalOne << "\n"
+         << armyTwo.getName() << " overall health: " << totalTwo << endl;
+    printDivider(DUEL_WIDTH);
+}
+
+// Clears a failed input stream and explains the problem to the user.
+// Pre: none
+// Post: cin is ready for the next read
+void clearFailedCin(const string &errorMessage)
+{
+    if (cin.fail())
+    {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+
+    cout << "\n"
+         << errorMessage << endl;
+}
+
+// Reads one whole number between the two limits.
+// Pre: minVal <= maxVal
+// Post: returns a number between minVal and maxVal
+int readInt(const string &prompt, int minVal, int maxVal)
+{
+    int inputVal = 0;
+    bool isValid = false;
+
+    while (!isValid)
+    {
+        cout << prompt;
+        cin >> inputVal;
+
+        if (cin.fail())
+        {
+            clearFailedCin("Invalid entry; please enter a whole number");
+        }
+        else if (inputVal < minVal || inputVal > maxVal)
+        {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\nPlease enter a whole number from " << minVal << " to " << maxVal << endl;
+        }
+        else
+        {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            isValid = true;
+        }
+    }
+
+    return inputVal;
+}
+
+// Reads the name of one army.
+// Pre: none
+// Post: returns a name that holds a valid number of letters
+string readArmyName(const string &prompt)
+{
+    string inputName = DEFAULT_NAME;
+    bool isValid = false;
+
+    while (!isValid)
+    {
+        cout << prompt;
+        getline(cin, inputName);
+
+        int letterCount = countAlphabetic(inputName);
+
+        if (letterCount < MIN_ARMY_NAME_LETTERS || letterCount > MAX_ARMY_NAME_LETTERS)
+        {
+            cout << "\nAn army name needs from " << MIN_ARMY_NAME_LETTERS << " to " << MAX_ARMY_NAME_LETTERS << " letters" << endl;
+        }
+        else
+        {
+            isValid = true;
+        }
+    }
+
+    return inputName;
+}
+
+// Counts the letters of the incoming text.
+// Pre: none
+// Post: returns the number of alphabetic characters
+int countAlphabetic(const string &text)
+{
+    int count = 0;
+    int length = static_cast<int>(text.length());
+
+    for (int i = 0; i < length; ++i)
+    {
+        if (isalpha(static_cast<unsigned char>(text[i])))
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+// Returns the incoming text with an upper case first letter.
+// Pre: none
+// Post: the incoming text is unchanged
+string capitalizeFirst(const string &text)
+{
+    string capitalized = text;
+
+    if (capitalized.length() > 0)
+    {
+        capitalized[0] = static_cast<char>(toupper(static_cast<unsigned char>(capitalized[0])));
+    }
+
+    return capitalized;
+}
+
+// Returns a random whole number between the two limits.
+// Pre: minVal <= maxVal
+// Post: returns a number from minVal to maxVal
+int randomInRange(int minVal, int maxVal)
+{
+    return (rand() % (maxVal - minVal + 1)) + minVal;
+}
+
+// Reports whether a percentage roll landed inside the incoming chance.
+// Pre: chancePercent is from 0 to PERCENT_ROLL
+// Post: returns true chancePercent times out of PERCENT_ROLL
+bool isChanceHit(int chancePercent)
+{
+    return randomInRange(MIN_DAMAGE, PERCENT_ROLL) <= chancePercent;
+}
+
+// Prints a divider line of the incoming width.
+// Pre: width > 0
+// Post: cout is restored to the space fill character
+void printDivider(int width)
+{
+    cout << setfill(DIVIDER_CHAR) << setw(width) << "" << setfill(' ') << endl;
+}
+
+/* Test run
 aidentsang@Aidens-MacBook-Pro CS216_L7_AT % "/Users/aidentsang/Pierce college Labs C++/CS216_L7_AT/main"
 
 
 Battle Arena Menu:
-1. Play Game
+1. Play game
 2. Quit
 Enter your choice: 1
 
-Enter the name of army #1 (3+ letters): A
+Enter the number of creatures in each army (1 to 12): ^C
+aidentsang@Aidens-MacBook-Pro CS216_L7_AT % "/Users/aidentsang/Pierce college Labs C++/CS216_L7_AT/main"
 
-An army name needs at least 3 letters
 
-Enter the name of army #1 (3+ letters): ! 
-
-An army name needs at least 3 letters
-
-Enter the name of army #1 (3+ letters): Aid
-Enter the name of army #2 (3+ letters): Sha
-Enter the number of creatures per army: -1
-
-Please enter a number between 1 and 12
-Enter the number of creatures per army: !
-
-Invalid input; please enter a whole number
-Enter the number of creatures per army: 12
-==============================================================================
-NEW BATTLE
-==============================================================================
-
-Aid Stats before the Battle
-Creature        Type          Strength    Health
-Morgas          demon              101       146
-Thorfin         cyberelf           239       118
-Petra           elf                262        94
-Karan           balrog             104       239
-Seren           cyberelf            95       244
-Lunara          elf                249        68
-Lagnar          elf                 70        63
-Orrin           demon              134       160
-Quillon         elf                160       209
-Morwen          balrog             145       158
-Chester         demon              235       220
-Ragnar          elf                 61       236
-Total health of Aid: 1955
-
-Sha Stats before the Battle
-Creature        Type          Strength    Health
-Kaelith         demon              224       188
-Aldric          elf                217        64
-Grisha          demon              198        85
-Isolde          cyberelf            80        46
-Dorian          elf                194       186
-Hollis          cyberelf           204       118
-Faelan          balrog             259       246
-Cassia          balrog              53       221
-Bricta          cyberelf           147        90
-Varek           demon              111       197
-Nimue           balrog             236        84
-Osric           cyberelf           105       125
-Total health of Sha: 1650
-
-Attacker                Army           Damage   Defender                Army           Before    After
-
--- Duel 1: Morgas the Demon of Aid vs Kaelith the Demon of Sha --
-Morgas the Demon        Aid                95   Kaelith the Demon       Sha               188       93
-Kaelith the Demon       Sha               117   Morgas the Demon        Aid               146       29
-Morgas the Demon        Aid                29   Kaelith the Demon       Sha                93       64
-Kaelith the Demon       Sha               159   Morgas the Demon        Aid                29        0
->> Kaelith the Demon defeated Morgas the Demon
-
--- Duel 2: Thorfin the Cyberelf of Aid vs Aldric the Elf of Sha --
-Thorfin the Cyberelf    Aid               166   Aldric the Elf          Sha                64        0
->> Thorfin the Cyberelf defeated Aldric the Elf
-
--- Duel 3: Petra the Elf of Aid vs Grisha the Demon of Sha --
-Petra the Elf           Aid                20   Grisha the Demon        Sha                85       65
-Grisha the Demon        Sha                 2   Petra the Elf           Aid                94       92
-Petra the Elf           Aid                71   Grisha the Demon        Sha                65        0
->> Petra the Elf defeated Grisha the Demon
-
--- Duel 4: Karan the Balrog of Aid vs Isolde the Cyberelf of Sha --
-Karan the Balrog        Aid                55   Isolde the Cyberelf     Sha                46        0
->> Karan the Balrog defeated Isolde the Cyberelf
-
--- Duel 5: Seren the Cyberelf of Aid vs Dorian the Elf of Sha --
-Dorian the Elf          Sha                76   Seren the Cyberelf      Aid               244      168
-Seren the Cyberelf      Aid                53   Dorian the Elf          Sha               186      133
-Dorian the Elf          Sha                64   Seren the Cyberelf      Aid               168      104
-Seren the Cyberelf      Aid                63   Dorian the Elf          Sha               133       70
-Dorian the Elf          Sha                40   Seren the Cyberelf      Aid               104       64
-Seren the Cyberelf      Aid                50   Dorian the Elf          Sha                70       20
-Dorian the Elf          Sha               184   Seren the Cyberelf      Aid                64        0
->> Dorian the Elf defeated Seren the Cyberelf
-
--- Duel 6: Lunara the Elf of Aid vs Hollis the Cyberelf of Sha --
-Hollis the Cyberelf     Sha                71   Lunara the Elf          Aid                68        0
->> Hollis the Cyberelf defeated Lunara the Elf
-
--- Duel 7: Lagnar the Elf of Aid vs Faelan the Balrog of Sha --
-Lagnar the Elf          Aid                41   Faelan the Balrog       Sha               246      205
-Faelan the Balrog       Sha               376   Lagnar the Elf          Aid                63        0
->> Faelan the Balrog defeated Lagnar the Elf
-
--- Duel 8: Orrin the Demon of Aid vs Cassia the Balrog of Sha --
-Cassia the Balrog       Sha                35   Orrin the Demon         Aid               160      125
-Orrin the Demon         Aid               166   Cassia the Balrog       Sha               221       55
-Cassia the Balrog       Sha                70   Orrin the Demon         Aid               125       55
-Orrin the Demon         Aid               105   Cassia the Balrog       Sha                55        0
->> Orrin the Demon defeated Cassia the Balrog
-
--- Duel 9: Quillon the Elf of Aid vs Bricta the Cyberelf of Sha --
-Bricta the Cyberelf     Sha               113   Quillon the Elf         Aid               209       96
-Quillon the Elf         Aid                76   Bricta the Cyberelf     Sha                90       14
-Bricta the Cyberelf     Sha                78   Quillon the Elf         Aid                96       18
-Quillon the Elf         Aid               224   Bricta the Cyberelf     Sha                14        0
->> Quillon the Elf defeated Bricta the Cyberelf
-
--- Duel 10: Morwen the Balrog of Aid vs Varek the Demon of Sha --
-Varek the Demon         Sha                83   Morwen the Balrog       Aid               158       75
-Morwen the Balrog       Aid               196   Varek the Demon         Sha               197        1
-Varek the Demon         Sha                 5   Morwen the Balrog       Aid                75       70
-Morwen the Balrog       Aid                95   Varek the Demon         Sha                 1        0
->> Morwen the Balrog defeated Varek the Demon
-
--- Duel 11: Chester the Demon of Aid vs Nimue the Balrog of Sha --
-Chester the Demon       Aid                12   Nimue the Balrog        Sha                84       72
-Nimue the Balrog        Sha               233   Chester the Demon       Aid               220        0
->> Nimue the Balrog defeated Chester the Demon
-
--- Duel 12: Ragnar the Elf of Aid vs Osric the Cyberelf of Sha --
-Ragnar the Elf          Aid                55   Osric the Cyberelf      Sha               125       70
-Osric the Cyberelf      Sha                91   Ragnar the Elf          Aid               236      145
-Ragnar the Elf          Aid                19   Osric the Cyberelf      Sha                70       51
-Osric the Cyberelf      Sha                37   Ragnar the Elf          Aid               145      108
-Ragnar the Elf          Aid                18   Osric the Cyberelf      Sha                51       33
-Osric the Cyberelf      Sha                98   Ragnar the Elf          Aid               108       10
-Ragnar the Elf          Aid                24   Osric the Cyberelf      Sha                33        9
-Osric the Cyberelf      Sha                10   Ragnar the Elf          Aid                10        0
->> Osric the Cyberelf defeated Ragnar the Elf
-
-Aid Stats after the Battle
-Creature        Type          Strength    Health
-Morgas          demon              101         0
-Thorfin         cyberelf           239       118
-Petra           elf                262        92
-Karan           balrog             104       239
-Seren           cyberelf            95         0
-Lunara          elf                249         0
-Lagnar          elf                 70         0
-Orrin           demon              134        55
-Quillon         elf                160        18
-Morwen          balrog             145        70
-Chester         demon              235         0
-Ragnar          elf                 61         0
-Total health of Aid: 592
-
-Sha Stats after the Battle
-Creature        Type          Strength    Health
-Kaelith         demon              224        64
-Aldric          elf                217         0
-Grisha          demon              198         0
-Isolde          cyberelf            80         0
-Dorian          elf                194        20
-Hollis          cyberelf           204       118
-Faelan          balrog             259       205
-Cassia          balrog              53         0
-Bricta          cyberelf           147         0
-Varek           demon              111         0
-Nimue           balrog             236        72
-Osric           cyberelf           105         9
-Total health of Sha: 488
-==============================================================================
->>> Aid wins the battle! <<<
-Aid overall health: 592
-Sha overall health: 488
-==============================================================================
-
-Fight a rematch with the same creatures? 1. Yes  2. No
-Enter your choice: 3
-
-Please enter a number between 1 and 2
-
-Fight a rematch with the same creatures? 1. Yes  2. No
-Enter your choice: 1
-
-Both armies have recovered; every creature's strength and health were re-rolled
-==============================================================================
-NEW BATTLE
-==============================================================================
-
-Aid Stats before the Battle
-Creature        Type          Strength    Health
-Morgas          demon              138        81
-Thorfin         cyberelf           132        69
-Petra           elf                149        69
-Karan           balrog             129        50
-Seren           cyberelf            50        30
-Lunara          elf                 30        32
-Lagnar          elf                 46       125
-Orrin           demon              121        42
-Quillon         elf                 99        44
-Morwen          balrog             131        73
-Chester         demon               77        38
-Ragnar          elf                132        42
-Total health of Aid: 695
-
-Sha Stats before the Battle
-Creature        Type          Strength    Health
-Kaelith         demon              132        73
-Aldric          elf                126        37
-Grisha          demon               37        87
-Isolde          cyberelf            91       133
-Dorian          elf                102       110
-Hollis          cyberelf            37        92
-Faelan          balrog             102       138
-Cassia          balrog              91        44
-Bricta          cyberelf           137        38
-Varek           demon               79        32
-Nimue           balrog             130       139
-Osric           cyberelf           100       146
-Total health of Sha: 1069
-
-Attacker                Army           Damage   Defender                Army           Before    After
-
--- Duel 1: Morgas the Demon of Aid vs Kaelith the Demon of Sha --
-Morgas the Demon        Aid               103   Kaelith the Demon       Sha                73        0
->> Morgas the Demon defeated Kaelith the Demon
-
--- Duel 2: Thorfin the Cyberelf of Aid vs Aldric the Elf of Sha --
-Thorfin the Cyberelf    Aid                98   Aldric the Elf          Sha                37        0
->> Thorfin the Cyberelf defeated Aldric the Elf
-
--- Duel 3: Petra the Elf of Aid vs Grisha the Demon of Sha --
-Petra the Elf           Aid                95   Grisha the Demon        Sha                87        0
->> Petra the Elf defeated Grisha the Demon
-
--- Duel 4: Karan the Balrog of Aid vs Isolde the Cyberelf of Sha --
-Karan the Balrog        Aid                97   Isolde the Cyberelf     Sha               133       36
-Isolde the Cyberelf     Sha                30   Karan the Balrog        Aid                50       20
-Karan the Balrog        Aid               177   Isolde the Cyberelf     Sha                36        0
->> Karan the Balrog defeated Isolde the Cyberelf
-
--- Duel 5: Seren the Cyberelf of Aid vs Dorian the Elf of Sha --
-Dorian the Elf          Sha                62   Seren the Cyberelf      Aid                30        0
->> Dorian the Elf defeated Seren the Cyberelf
-
--- Duel 6: Lunara the Elf of Aid vs Hollis the Cyberelf of Sha --
-Lunara the Elf          Aid                28   Hollis the Cyberelf     Sha                92       64
-Hollis the Cyberelf     Sha               102   Lunara the Elf          Aid                32        0
->> Hollis the Cyberelf defeated Lunara the Elf
-
--- Duel 7: Lagnar the Elf of Aid vs Faelan the Balrog of Sha --
-Lagnar the Elf          Aid                18   Faelan the Balrog       Sha               138      120
-Faelan the Balrog       Sha                95   Lagnar the Elf          Aid               125       30
-Lagnar the Elf          Aid                22   Faelan the Balrog       Sha               120       98
-Faelan the Balrog       Sha               125   Lagnar the Elf          Aid                30        0
->> Faelan the Balrog defeated Lagnar the Elf
-
--- Duel 8: Orrin the Demon of Aid vs Cassia the Balrog of Sha --
-Orrin the Demon         Aid               104   Cassia the Balrog       Sha                44        0
->> Orrin the Demon defeated Cassia the Balrog
-
--- Duel 9: Quillon the Elf of Aid vs Bricta the Cyberelf of Sha --
-Quillon the Elf         Aid               182   Bricta the Cyberelf     Sha                38        0
->> Quillon the Elf defeated Bricta the Cyberelf
-
--- Duel 10: Morwen the Balrog of Aid vs Varek the Demon of Sha --
-Varek the Demon         Sha                67   Morwen the Balrog       Aid                73        6
-Morwen the Balrog       Aid               123   Varek the Demon         Sha                32        0
->> Morwen the Balrog defeated Varek the Demon
-
--- Duel 11: Chester the Demon of Aid vs Nimue the Balrog of Sha --
-Nimue the Balrog        Sha                93   Chester the Demon       Aid                38        0
->> Nimue the Balrog defeated Chester the Demon
-
--- Duel 12: Ragnar the Elf of Aid vs Osric the Cyberelf of Sha --
-Ragnar the Elf          Aid                44   Osric the Cyberelf      Sha               146      102
-Osric the Cyberelf      Sha                24   Ragnar the Elf          Aid                42       18
-Ragnar the Elf          Aid               119   Osric the Cyberelf      Sha               102        0
->> Ragnar the Elf defeated Osric the Cyberelf
-
-Aid Stats after the Battle
-Creature        Type          Strength    Health
-Morgas          demon              138        81
-Thorfin         cyberelf           132        69
-Petra           elf                149        69
-Karan           balrog             129        20
-Seren           cyberelf            50         0
-Lunara          elf                 30         0
-Lagnar          elf                 46         0
-Orrin           demon              121        42
-Quillon         elf                 99        44
-Morwen          balrog             131         6
-Chester         demon               77         0
-Ragnar          elf                132        18
-Total health of Aid: 349
-
-Sha Stats after the Battle
-Creature        Type          Strength    Health
-Kaelith         demon              132         0
-Aldric          elf                126         0
-Grisha          demon               37         0
-Isolde          cyberelf            91         0
-Dorian          elf                102       110
-Hollis          cyberelf            37        64
-Faelan          balrog             102        98
-Cassia          balrog              91         0
-Bricta          cyberelf           137         0
-Varek           demon               79         0
-Nimue           balrog             130       139
-Osric           cyberelf           100         0
-Total health of Sha: 411
-==============================================================================
->>> Sha wins the battle! <<<
-Aid overall health: 349
-Sha overall health: 411
-==============================================================================
-
-Fight a rematch with the same creatures? 1. Yes  2. No
+Battle Arena Menu:
+1. Play game
+2. Quit
 Enter your choice: !
 
-Invalid input; please enter a whole number
-
-Fight a rematch with the same creatures? 1. Yes  2. No
-Enter your choice: 2
+Invalid entry; please enter a whole number
 
 
 Battle Arena Menu:
-1. Play Game
-2. Quit
-Enter your choice: 3
-
-Invalid menu choice
-
-
-Battle Arena Menu:
-1. Play Game
+1. Play game
 2. Quit
 Enter your choice: a
 
-Invalid input; please enter a whole number
+Invalid entry; please enter a whole number
 
 
 Battle Arena Menu:
-1. Play Game
+1. Play game
+2. Quit
+Enter your choice: 1
+
+Enter the number of creatures in each army (1 to 12): -1
+
+Please enter a whole number from 1 to 12
+
+Enter the number of creatures in each army (1 to 12): 13
+
+Please enter a whole number from 1 to 12
+
+Enter the number of creatures in each army (1 to 12): 12
+Enter the name of army #1 (3 to 9 letters): Hi
+
+An army name needs from 3 to 9 letters
+Enter the name of army #1 (3 to 9 letters): Aiden's
+Enter the name of army #2 (3 to 9 letters): Kevin's
+
+=======================================================================================
+NEW BATTLE
+=======================================================================================
+
+Aiden's Stats before the Battle
+Creature    Type          Strength    Health
+============================================
+Morgas      cyberelf           166       116
+Thorfin     balrog              60       171
+Petra       balrog             269        67
+Karan       demon               93       266
+Seren       demon              168       265
+Lunara      balrog             205       182
+Lagnar      elf                 59        60
+Orrin       demon               82        92
+Quillon     demon               82       137
+Morwen      cyberelf           118       114
+Chester     cyberelf           144        81
+Ragnar      elf                263       170
+============================================
+Overall health of Aiden's: 1721
+
+Kevin's Stats before the Battle
+Creature    Type          Strength    Health
+============================================
+Kaelith     cyberelf           231       138
+Aldric      elf                 85        56
+Grisha      cyberelf           253       105
+Isolde      balrog             121       214
+Dorian      demon              134        52
+Hollis      demon              171       140
+Faelan      balrog             131       172
+Cassia      demon               71       153
+Bricta      balrog              46       238
+Varek       elf                 90       151
+Nimue       balrog             228       178
+Osric       demon              126       197
+============================================
+Overall health of Kevin's: 1794
+
+Attacker               Army       Damage  Defender               Army       Before  After
+
+-- Duel 1: Morgas the Cyberelf of Aiden's vs Kaelith the Cyberelf of Kevin's --
+Kaelith the Cyberelf   Kevin's       209  Morgas the Cyberelf    Aiden's       116      0
+>> Kaelith the Cyberelf defeated Morgas the Cyberelf
+
+-- Duel 2: Thorfin the Balrog of Aiden's vs Aldric the Elf of Kevin's --
+Thorfin the Balrog     Aiden's        73  Aldric the Elf         Kevin's        56      0
+>> Thorfin the Balrog defeated Aldric the Elf
+
+-- Duel 3: Petra the Balrog of Aiden's vs Grisha the Cyberelf of Kevin's --
+Petra the Balrog       Aiden's       177  Grisha the Cyberelf    Kevin's       105      0
+>> Petra the Balrog defeated Grisha the Cyberelf
+
+-- Duel 4: Karan the Demon of Aiden's vs Isolde the Balrog of Kevin's --
+Karan the Demon        Aiden's        38  Isolde the Balrog      Kevin's       214    176
+Isolde the Balrog      Kevin's       122  Karan the Demon        Aiden's       266    144
+Karan the Demon        Aiden's        20  Isolde the Balrog      Kevin's       176    156
+Isolde the Balrog      Kevin's       155  Karan the Demon        Aiden's       144      0
+>> Isolde the Balrog defeated Karan the Demon
+
+-- Duel 5: Seren the Demon of Aiden's vs Dorian the Demon of Kevin's --
+Dorian the Demon       Kevin's       100  Seren the Demon        Aiden's       265    165
+Seren the Demon        Aiden's        16  Dorian the Demon       Kevin's        52     36
+Dorian the Demon       Kevin's        78  Seren the Demon        Aiden's       165     87
+Seren the Demon        Aiden's       152  Dorian the Demon       Kevin's        36      0
+>> Seren the Demon defeated Dorian the Demon
+
+-- Duel 6: Lunara the Balrog of Aiden's vs Hollis the Demon of Kevin's --
+Lunara the Balrog      Aiden's       322  Hollis the Demon       Kevin's       140      0
+>> Lunara the Balrog defeated Hollis the Demon
+
+-- Duel 7: Lagnar the Elf of Aiden's vs Faelan the Balrog of Kevin's --
+Faelan the Balrog      Kevin's        63  Lagnar the Elf         Aiden's        60      0
+>> Faelan the Balrog defeated Lagnar the Elf
+
+-- Duel 8: Orrin the Demon of Aiden's vs Cassia the Demon of Kevin's --
+Cassia the Demon       Kevin's        49  Orrin the Demon        Aiden's        92     43
+Orrin the Demon        Aiden's        21  Cassia the Demon       Kevin's       153    132
+Cassia the Demon       Kevin's        34  Orrin the Demon        Aiden's        43      9
+Orrin the Demon        Aiden's        54  Cassia the Demon       Kevin's       132     78
+Cassia the Demon       Kevin's        57  Orrin the Demon        Aiden's         9      0
+>> Cassia the Demon defeated Orrin the Demon
+
+-- Duel 9: Quillon the Demon of Aiden's vs Bricta the Balrog of Kevin's --
+Quillon the Demon      Aiden's        50  Bricta the Balrog      Kevin's       238    188
+Bricta the Balrog      Kevin's        18  Quillon the Demon      Aiden's       137    119
+Quillon the Demon      Aiden's        75  Bricta the Balrog      Kevin's       188    113
+Bricta the Balrog      Kevin's        36  Quillon the Demon      Aiden's       119     83
+Quillon the Demon      Aiden's        82  Bricta the Balrog      Kevin's       113     31
+Bricta the Balrog      Kevin's        74  Quillon the Demon      Aiden's        83      9
+Quillon the Demon      Aiden's        50  Bricta the Balrog      Kevin's        31      0
+>> Quillon the Demon defeated Bricta the Balrog
+
+-- Duel 10: Morwen the Cyberelf of Aiden's vs Varek the Elf of Kevin's --
+Varek the Elf          Kevin's        78  Morwen the Cyberelf    Aiden's       114     36
+Morwen the Cyberelf    Aiden's        85  Varek the Elf          Kevin's       151     66
+Varek the Elf          Kevin's       140  Morwen the Cyberelf    Aiden's        36      0
+>> Varek the Elf defeated Morwen the Cyberelf
+
+-- Duel 11: Chester the Cyberelf of Aiden's vs Nimue the Balrog of Kevin's --
+Chester the Cyberelf   Aiden's       134  Nimue the Balrog       Kevin's       178     44
+Nimue the Balrog       Kevin's       288  Chester the Cyberelf   Aiden's        81      0
+>> Nimue the Balrog defeated Chester the Cyberelf
+
+-- Duel 12: Ragnar the Elf of Aiden's vs Osric the Demon of Kevin's --
+Osric the Demon        Kevin's        42  Ragnar the Elf         Aiden's       170    128
+Ragnar the Elf         Aiden's       120  Osric the Demon        Kevin's       197     77
+Osric the Demon        Kevin's       102  Ragnar the Elf         Aiden's       128     26
+Ragnar the Elf         Aiden's       148  Osric the Demon        Kevin's        77      0
+>> Ragnar the Elf defeated Osric the Demon
+
+Aiden's Stats after the Battle
+Creature    Type          Strength    Health
+============================================
+Morgas      cyberelf           166         0
+Thorfin     balrog              60       171
+Petra       balrog             269        67
+Karan       demon               93         0
+Seren       demon              168        87
+Lunara      balrog             205       182
+Lagnar      elf                 59         0
+Orrin       demon               82         0
+Quillon     demon               82         9
+Morwen      cyberelf           118         0
+Chester     cyberelf           144         0
+Ragnar      elf                263        26
+============================================
+Overall health of Aiden's: 542
+
+Kevin's Stats after the Battle
+Creature    Type          Strength    Health
+============================================
+Kaelith     cyberelf           231       138
+Aldric      elf                 85         0
+Grisha      cyberelf           253         0
+Isolde      balrog             121       156
+Dorian      demon              134         0
+Hollis      demon              171         0
+Faelan      balrog             131       172
+Cassia      demon               71        78
+Bricta      balrog              46         0
+Varek       elf                 90        66
+Nimue       balrog             228        44
+Osric       demon              126         0
+============================================
+Overall health of Kevin's: 654
+=======================================================================================
+>>> Kevin's wins the battle <<<
+Aiden's overall health: 542
+Kevin's overall health: 654
+=======================================================================================
+
+
+Rematch Menu:
+1. Fight again with the same creatures
+2. Back to the main menu
+Enter your choice: 3
+
+Please enter a whole number from 1 to 2
+
+
+Rematch Menu:
+1. Fight again with the same creatures
+2. Back to the main menu
+Enter your choice: !
+
+Invalid entry; please enter a whole number
+
+
+Rematch Menu:
+1. Fight again with the same creatures
+2. Back to the main menu
+Enter your choice: 1
+
+Both armies recovered; every strength and health was rolled again
+
+=======================================================================================
+NEW BATTLE
+=======================================================================================
+
+Aiden's Stats before the Battle
+Creature    Type          Strength    Health
+============================================
+Morgas      cyberelf            31        76
+Thorfin     balrog             110        44
+Petra       balrog              53        58
+Karan       demon               56        86
+Seren       demon              116       111
+Lunara      balrog              71       121
+Lagnar      elf                134       105
+Orrin       demon              114        80
+Quillon     demon              130       141
+Morwen      cyberelf           119        46
+Chester     cyberelf           128        58
+Ragnar      elf                128       120
+============================================
+Overall health of Aiden's: 1046
+
+Kevin's Stats before the Battle
+Creature    Type          Strength    Health
+============================================
+Kaelith     cyberelf           139       118
+Aldric      elf                 70       149
+Grisha      cyberelf           137        86
+Isolde      balrog              84        54
+Dorian      demon              141        84
+Hollis      demon               40        86
+Faelan      balrog              55        99
+Cassia      demon              138        90
+Bricta      balrog             112        97
+Varek       elf                 37       116
+Nimue       balrog              87        49
+Osric       demon               76        63
+============================================
+Overall health of Kevin's: 1091
+
+Attacker               Army       Damage  Defender               Army       Before  After
+
+-- Duel 1: Morgas the Cyberelf of Aiden's vs Kaelith the Cyberelf of Kevin's --
+Kaelith the Cyberelf   Kevin's       104  Morgas the Cyberelf    Aiden's        76      0
+>> Kaelith the Cyberelf defeated Morgas the Cyberelf
+
+-- Duel 2: Thorfin the Balrog of Aiden's vs Aldric the Elf of Kevin's --
+Thorfin the Balrog     Aiden's       184  Aldric the Elf         Kevin's       149      0
+>> Thorfin the Balrog defeated Aldric the Elf
+
+-- Duel 3: Petra the Balrog of Aiden's vs Grisha the Cyberelf of Kevin's --
+Petra the Balrog       Aiden's        57  Grisha the Cyberelf    Kevin's        86     29
+Grisha the Cyberelf    Kevin's        11  Petra the Balrog       Aiden's        58     47
+Petra the Balrog       Aiden's        57  Grisha the Cyberelf    Kevin's        29      0
+>> Petra the Balrog defeated Grisha the Cyberelf
+
+-- Duel 4: Karan the Demon of Aiden's vs Isolde the Balrog of Kevin's --
+Isolde the Balrog      Kevin's        88  Karan the Demon        Aiden's        86      0
+>> Isolde the Balrog defeated Karan the Demon
+
+-- Duel 5: Seren the Demon of Aiden's vs Dorian the Demon of Kevin's --
+Dorian the Demon       Kevin's        79  Seren the Demon        Aiden's       111     32
+Seren the Demon        Aiden's        36  Dorian the Demon       Kevin's        84     48
+Dorian the Demon       Kevin's        88  Seren the Demon        Aiden's        32      0
+>> Dorian the Demon defeated Seren the Demon
+
+-- Duel 6: Lunara the Balrog of Aiden's vs Hollis the Demon of Kevin's --
+Lunara the Balrog      Aiden's        87  Hollis the Demon       Kevin's        86      0
+>> Lunara the Balrog defeated Hollis the Demon
+
+-- Duel 7: Lagnar the Elf of Aiden's vs Faelan the Balrog of Kevin's --
+Faelan the Balrog      Kevin's        35  Lagnar the Elf         Aiden's       105     70
+Lagnar the Elf         Aiden's        10  Faelan the Balrog      Kevin's        99     89
+Faelan the Balrog      Kevin's        61  Lagnar the Elf         Aiden's        70      9
+Lagnar the Elf         Aiden's        86  Faelan the Balrog      Kevin's        89      3
+Faelan the Balrog      Kevin's        51  Lagnar the Elf         Aiden's         9      0
+>> Faelan the Balrog defeated Lagnar the Elf
+
+-- Duel 8: Orrin the Demon of Aiden's vs Cassia the Demon of Kevin's --
+Cassia the Demon       Kevin's       124  Orrin the Demon        Aiden's        80      0
+>> Cassia the Demon defeated Orrin the Demon
+
+-- Duel 9: Quillon the Demon of Aiden's vs Bricta the Balrog of Kevin's --
+Bricta the Balrog      Kevin's       121  Quillon the Demon      Aiden's       141     20
+Quillon the Demon      Aiden's        64  Bricta the Balrog      Kevin's        97     33
+Bricta the Balrog      Kevin's        77  Quillon the Demon      Aiden's        20      0
+>> Bricta the Balrog defeated Quillon the Demon
+
+-- Duel 10: Morwen the Cyberelf of Aiden's vs Varek the Elf of Kevin's --
+Morwen the Cyberelf    Aiden's       230  Varek the Elf          Kevin's       116      0
+>> Morwen the Cyberelf defeated Varek the Elf
+
+-- Duel 11: Chester the Cyberelf of Aiden's vs Nimue the Balrog of Kevin's --
+Chester the Cyberelf   Aiden's       186  Nimue the Balrog       Kevin's        49      0
+>> Chester the Cyberelf defeated Nimue the Balrog
+
+-- Duel 12: Ragnar the Elf of Aiden's vs Osric the Demon of Kevin's --
+Osric the Demon        Kevin's        16  Ragnar the Elf         Aiden's       120    104
+Ragnar the Elf         Aiden's       115  Osric the Demon        Kevin's        63      0
+>> Ragnar the Elf defeated Osric the Demon
+
+Aiden's Stats after the Battle
+Creature    Type          Strength    Health
+============================================
+Morgas      cyberelf            31         0
+Thorfin     balrog             110        44
+Petra       balrog              53        47
+Karan       demon               56         0
+Seren       demon              116         0
+Lunara      balrog              71       121
+Lagnar      elf                134         0
+Orrin       demon              114         0
+Quillon     demon              130         0
+Morwen      cyberelf           119        46
+Chester     cyberelf           128        58
+Ragnar      elf                128       104
+============================================
+Overall health of Aiden's: 420
+
+Kevin's Stats after the Battle
+Creature    Type          Strength    Health
+============================================
+Kaelith     cyberelf           139       118
+Aldric      elf                 70         0
+Grisha      cyberelf           137         0
+Isolde      balrog              84        54
+Dorian      demon              141        48
+Hollis      demon               40         0
+Faelan      balrog              55         3
+Cassia      demon              138        90
+Bricta      balrog             112        33
+Varek       elf                 37         0
+Nimue       balrog              87         0
+Osric       demon               76         0
+============================================
+Overall health of Kevin's: 346
+=======================================================================================
+>>> Aiden's wins the battle <<<
+Aiden's overall health: 420
+Kevin's overall health: 346
+=======================================================================================
+
+
+Rematch Menu:
+1. Fight again with the same creatures
+2. Back to the main menu
+Enter your choice: 2
+
+Returning to the main menu
+
+
+Battle Arena Menu:
+1. Play game
 2. Quit
 Enter your choice: 2
 
-Thanks for playing. Goodbye! */
+Thanks for playing. Goodbye!
+aidentsang@Aidens-MacBook-Pro CS216_L7_AT % 
+*/
